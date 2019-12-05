@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/admin/sepacustom</path>
+    <page_callback>CRM_Sepacustom_Form_Configuration</page_callback>
+    <title>Configuration</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+</menu>
