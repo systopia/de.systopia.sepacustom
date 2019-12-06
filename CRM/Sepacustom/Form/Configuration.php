@@ -100,6 +100,24 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     }
     Civi::settings()->set('customsepa_bank_holidays', $bank_holidays);
 
+    // extract BIC restrictions
+    $bic_restrictions = [];
+    foreach (range(0, self::MAX_BIC_RESTRICTION_COUNT) as $i) {
+      if (!empty($values["bic_restriction_creditor_{$i}"])
+          && !empty($values["bic_restriction_regex_{$i}"])) {
+        // creditor and pattern are set => all good
+        $bic_restrictions[] = [
+            'creditor_id' => $values["bic_restriction_creditor_{$i}"],
+            'match'       => $values["bic_restriction_condition_{$i}"],
+            'pattern'     => $values["bic_restriction_regex_{$i}"],
+            'error'       => $values["bic_restriction_message_{$i}"],
+        ];
+      }
+    }
+    Civi::settings()->set('customsepa_bic_restrictions', $bic_restrictions);
+
+
+    // done
     parent::postProcess();
 
     // reset page to format values (e.g. bank holidays)

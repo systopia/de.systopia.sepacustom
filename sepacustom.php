@@ -17,6 +17,24 @@ require_once 'sepacustom.civix.php';
 use CRM_Sepacustom_ExtensionUtil as E;
 
 /**
+ * Add extra validation for forms
+ */
+function sepacustom_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  // apply BIC restrictions to new mandates
+  if ($formName == 'CRM_Sepa_Form_CreateMandate') {
+    $bic = CRM_Utils_Array::value('bic', $fields);
+    if ($bic) {
+      $creditor_id = CRM_Utils_Array::value('creditor_id', $fields);
+      $bic_error = CRM_Sepacustom_Configuration::getBICRestrictionError($creditor_id, $bic);
+      if ($bic_error) {
+        $errors['bic'] = $bic_error;
+      }
+    }
+  }
+}
+
+
+/**
  * Implements hook_civicrm_config().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/ 

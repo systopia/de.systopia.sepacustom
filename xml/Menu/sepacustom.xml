@@ -3,7 +3,10 @@
   <item>
     <path>civicrm/admin/sepacustom</path>
     <page_callback>CRM_Sepacustom_Form_Configuration</page_callback>
-    <title>Configuration</title>
-    <access_arguments>access CiviCRM</access_arguments>
+    <title>CiviSEPA Customisation</title>
+    <access_arguments>administer CiviCRM</access_arguments>
+    <adminGroup>Communications</adminGroup>
+    <icon>admin/small/case_type.png</icon>
+    <weight>400</weight>
   </item>
 </menu>
