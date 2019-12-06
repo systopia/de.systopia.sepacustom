@@ -5,8 +5,7 @@
     <page_callback>CRM_Sepacustom_Form_Configuration</page_callback>
     <title>CiviSEPA Customisation</title>
     <access_arguments>administer CiviCRM</access_arguments>
-    <adminGroup>Communications</adminGroup>
-    <icon>admin/small/case_type.png</icon>
-    <weight>400</weight>
+    <adminGroup>CiviContribute</adminGroup>
+    <icon>admin/small/online_contribution_pages.png</icon>
   </item>
 </menu>

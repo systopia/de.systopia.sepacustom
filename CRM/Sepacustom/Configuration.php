@@ -67,7 +67,7 @@ class CRM_Sepacustom_Configuration {
         // it applies to this creditor
         if (!empty($r['match']) && !empty($r['pattern'])) {
           $match = preg_match("#{$r['pattern']}#", $bic);
-          if (($match && $r['match'] == '+') || (!$match && $r['match'] == '-')) {
+          if (($match && $r['match'] == '-') || (!$match && $r['match'] == '+')) {
             // this is a match
             return empty($r['error']) ? E::ts("Invalid BIC for this creditor") : $r['error'];
           }
