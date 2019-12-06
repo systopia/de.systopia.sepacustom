@@ -33,6 +33,19 @@ function sepacustom_civicrm_validateForm($formName, &$fields, &$files, &$form, &
   }
 }
 
+/**
+ * Implements CiviSEPA hook to adjust collection date
+ */
+function sepacustom_civicrm_defer_collection_date(&$collection_date, $creditor_id) {
+  $bank_holidays = CRM_Sepacustom_Configuration::getBankHolidays();
+  while (in_array($collection_date, $bank_holidays)                      // this is a bank holiday
+      || date('N', strtotime($collection_date) > 5)) {   // or this is a weekend
+    // while this is not a valid collection day, move on to the next day
+    $collection_date = date('Y-m-d', strtotime("+1 day", strtotime($collection_date)));
+  }
+}
+
+
 
 /**
  * Implements hook_civicrm_config().
