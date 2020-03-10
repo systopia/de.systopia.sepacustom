@@ -42,8 +42,10 @@
 
 <h3>{ts domain="de.systopia.sepacustom"}Transaction Group Reference Adjustments{/ts}</h3>
 <table>
-  <div id="help">{ts domain="de.systopia.sepacustom"}You can use regular expressions as defined by PHP's <code>preg_replace</code> function, see <a href="https://www.php.net/manual/en/function.preg-replace.php">here</a>.{/ts}</div>
-  <div id="help">{ts domain="de.systopia.sepacustom"}Be careful not to introduce <strong>illegal characters</strong> into the reference, there will be no further checking.{/ts}</div>
+  <div id="help">
+    {ts domain="de.systopia.sepacustom"}You can use regular expressions as defined by PHP's <code>preg_replace</code> function, see <a href="https://www.php.net/manual/en/function.preg-replace.php">here</a>.{/ts}
+    {ts domain="de.systopia.sepacustom"}Be careful not to introduce <strong>illegal characters</strong> into the reference, there will be no further checking.{/ts}
+  </div>
   {foreach from=$txref_list item=i}
     <tr class="sepacustom-txgreference-changes sepacustom-txgreference-changes-{$i}">
       <td>{ts domain="de.systopia.sepacustom"}Find string:{/ts}</td>
