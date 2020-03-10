@@ -78,14 +78,14 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
           'text',
           "txref_search_{$i}",
           E::ts("Find String"),
-          [],
+          ['class' => 'huge'],
           FALSE
       );
       $this->add(
           'text',
           "txref_replace_{$i}",
           E::ts("Replace With"),
-          [],
+          ['class' => 'huge'],
           FALSE
       );
     }
