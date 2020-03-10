@@ -19,13 +19,10 @@ function sepacustom_bic_restriction_resize() {
     let first_empty_shown = false;
     for (let i = 0; i <= CRM.vars.sepacustom.bic_restriction_count; i++) {
         let field = cj("[name=bic_restriction_creditor_" + i + "]");
-        console.log(i);
         if (field.val() == '') {
             if (first_empty_shown) {
-                console.log('hide');
                 field.parent().parent().hide();
             } else {
-                console.log('show');
                 field.parent().parent().show();
                 first_empty_shown = true;
             }
@@ -33,10 +30,33 @@ function sepacustom_bic_restriction_resize() {
     }
 }
 
+/**
+ * Hides all unused TXG refenrence updates
+ */
+function sepacustom_txreference_changes() {
+    let first_empty_shown = false;
+    for (let i = 0; i <= CRM.vars.sepacustom.txgreference_changes_count; i++) {
+        let field = cj("[name=txref_search_" + i + "]");
+        if (field.val() == '') {
+            if (first_empty_shown) {
+                field.parent().parent().hide();
+            } else {
+                field.parent().parent().show();
+                first_empty_shown = true;
+            }
+        }
+    }
+}
+
+
 cj(document).ready(function() {
     cj(".sepacustom-bic-restriction-creditor").find("select").change(function() {
         sepacustom_bic_restriction_resize();
     });
     sepacustom_bic_restriction_resize();
-   // console.log(CRM.vars.sepacustom.bic_restriction_count);
+
+    cj(".sepacustom-txgreference-changes").find("input").change(function() {
+        sepacustom_txreference_changes();
+    });
+    sepacustom_txreference_changes();
 });

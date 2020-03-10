@@ -40,6 +40,21 @@
 {/foreach}
 </table>
 
+<h3>{ts domain="de.systopia.sepacustom"}Transaction Group Reference Adjustments{/ts}</h3>
+<table>
+  <div id="help">{ts domain="de.systopia.sepacustom"}You can use regular expressions as defined by PHP's <code>preg_replace</code> function, see <a href="https://www.php.net/manual/en/function.preg-replace.php">here</a>.{/ts}</div>
+  {foreach from=$txref_list item=i}
+    <tr class="sepacustom-txgreference-changes sepacustom-txgreference-changes-{$i}">
+      <td>{ts domain="de.systopia.sepacustom"}Find string:{/ts}</td>
+      {capture assign="field_name"}txref_search_{$i}{/capture}
+      <td>{$form.$field_name.html}</td>
+      <td>{ts domain="de.systopia.sepacustom"}...and replace with:{/ts}</td>
+      {capture assign="field_name"}txref_replace_{$i}{/capture}
+      <td>{$form.$field_name.html}</td>
+    </tr>
+  {/foreach}
+</table>
+
 {* FOOTER *}
 <div class="crm-submit-buttons">
 {include file="CRM/common/formButtons.tpl" location="bottom"}

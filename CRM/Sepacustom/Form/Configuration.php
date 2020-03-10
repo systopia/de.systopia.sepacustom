@@ -23,6 +23,7 @@ use CRM_Sepacustom_ExtensionUtil as E;
 class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
   const MAX_BIC_RESTRICTION_COUNT = 10;
+  const MAX_GROUP_REFERENCE_COUNT = 10;
 
   public function buildQuickForm() {
     CRM_Utils_System::setTitle(E::ts("CiviSEPA Customisations"));
@@ -70,6 +71,25 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
       );
     }
 
+    // add group reference
+    $this->assign("txref_list", range(0, self::MAX_GROUP_REFERENCE_COUNT));
+    foreach (range(0, self::MAX_GROUP_REFERENCE_COUNT) as $i) {
+      $this->add(
+          'text',
+          "txref_search_{$i}",
+          E::ts("Find String"),
+          [],
+          FALSE
+      );
+      $this->add(
+          'text',
+          "txref_replace_{$i}",
+          E::ts("Replace With"),
+          [],
+          FALSE
+      );
+    }
+
     $this->addButtons([
         [
             'type'      => 'submit',
@@ -81,11 +101,13 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     // set defaults
     $this->setDefaults(['bank_holidays' => implode(', ', CRM_Sepacustom_Configuration::getBankHolidays())]);
     $this->setDefaults(CRM_Sepacustom_Configuration::getBICRestrictionsFormValues());
+    $this->setDefaults(CRM_Sepacustom_Configuration::getTXReferenceChangesFormValues());
 
     // add resources
     Civi::resources()->addScriptFile(E::LONG_NAME, 'js/configuration_form.js');
     Civi::resources()->addVars('sepacustom', [
-        'bic_restriction_count' => self::MAX_BIC_RESTRICTION_COUNT
+        'bic_restriction_count'      => self::MAX_BIC_RESTRICTION_COUNT,
+        'txgreference_changes_count' => self::MAX_BIC_RESTRICTION_COUNT
     ]);
     parent::buildQuickForm();
   }
@@ -116,6 +138,20 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     }
     Civi::settings()->set('customsepa_bic_restrictions', $bic_restrictions);
 
+    // extract TXReference manipulations
+    $xg_refenrence_changes = [];
+    foreach (range(0, self::MAX_GROUP_REFERENCE_COUNT) as $i) {
+      if (!empty($values["txref_search_{$i}"])) {
+        // creditor and pattern are set => all good
+        $xg_refenrence_changes[] = [
+            'search'  => $values["txref_search_{$i}"],
+            'replace' => $values["txref_replace_{$i}"],
+        ];
+      }
+    }
+    Civi::settings()->set('customsepa_txref_changes', $xg_refenrence_changes);
+    $nase = "naseTXGnase";
+    CRM_Sepacustom_Configuration::applyTxgReferenceChanges($nase);
 
     // done
     parent::postProcess();

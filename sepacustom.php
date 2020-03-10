@@ -45,6 +45,12 @@ function sepacustom_civicrm_defer_collection_date(&$collection_date, $creditor_i
   }
 }
 
+/**
+ * Implements CiviSEPA hook to adjust transaction reference
+ */
+function sepacustom_civicrm_modify_txgroup_reference(&$reference, $creditor_id, $mode, $collection_date) {
+  CRM_Sepacustom_Configuration::applyTxgReferenceChanges($reference);
+}
 
 
 /**

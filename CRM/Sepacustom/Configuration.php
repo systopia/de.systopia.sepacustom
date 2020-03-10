@@ -92,4 +92,58 @@ class CRM_Sepacustom_Configuration {
     }
     return $values;
   }
+
+
+  /**
+   * Get the list of BIC restrictions records. Each contains
+   * 'creditor_id' - ID or '*'
+   * 'match'       - '+' or '-' (positive or negative match)
+   * 'pattern'     - regex string
+   * 'error'       - error message to report in case of a match
+   *
+   * @return array with the restriction records
+   *
+   */
+  public static function getTXReferenceChanges() {
+    $restrictions = Civi::settings()->get('customsepa_txref_changes');
+    if (is_array($restrictions)) {
+      return $restrictions;
+    } else {
+      return [];
+    }
+  }
+
+  /**
+   * Apply any search/replace changes to the TXG reference
+   *
+   * @param $txg_reference  string current TXG reference
+   */
+  public static function applyTxgReferenceChanges(&$txg_reference) {
+    $changes = self::getTXReferenceChanges();
+    foreach ($changes as $change) {
+      // add delimiters if needed
+      if ($change['search'][0] != $change['search'][-1]) {
+       $change['search'] = '!' . preg_replace('/!/', '\\!', $change['search']) . '!';
+      }
+
+      // apply
+      $txg_reference = preg_replace($change['search'], $change['replace'], $txg_reference);
+    }
+  }
+
+
+  /**
+   * Get the default form values with the current BIC restrictions
+   */
+  public static function getTXReferenceChangesFormValues() {
+    $values  = [];
+    $changes = self::getTXReferenceChanges();
+    foreach ($changes as $i => $r) {
+      $values["txref_search_{$i}"]  = $r['search'];
+      $values["txref_replace_{$i}"] = $r['replace'];
+    }
+    return $values;
+  }
+
+
 }
