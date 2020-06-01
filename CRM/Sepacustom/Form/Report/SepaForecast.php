@@ -30,6 +30,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 
     function __construct()
     {
+        $this->getCollectionsTable();
         $this->_columns     = array(
             'civicrm_contact'           => array(
                 'dao'      => 'CRM_Contact_DAO_Contact',
@@ -204,7 +205,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
      */
     protected function getCollectionsTable()
     {
-        $now         = 'now'
+        $now         = 'now';
+        $today       = date('Y-m-d');
         $horizon     = (int) 100;  // TODO: option
         $ttl_seconds = (int) 3600; // TODO: option
 
@@ -250,7 +252,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 
         // step four: there is no such table => create one
         $timeout = date('YmdHis', strtotime("now + {$ttl_seconds} seconds"));
+        $horizon_date = date('YmdHis', strtotime("now + {$horizon} days"));
         $table_name = "sdd_forecast_{$timeout}_{$horizon}";
+        $creation_timestamp = microtime(true);
         CRM_Core_DAO::executeQuery("
         CREATE TABLE `{$table_name}` (
          `mandate_id`          int unsigned        COMMENT 'ID of the mandate that created this',
@@ -303,18 +307,49 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                 'end_date'               => $active_mandates->end_date,
                 'cancel_date'            => $active_mandates->cancel_date,
             ];
-            $next_collection = $next_date = CRM_Sepa_Logic_Batching::getNextExecutionDate(
+
+            // calculate next collection
+            $next_collection = CRM_Sepa_Logic_Batching::getNextExecutionDate(
                 $mandate,
                 $now,
                 $mandate->status
             );
 
-            // TODO: while nextcollection < horizon:
-            // ->defer(via cache)
-            // insert into BLORP
-        }
+            // calculate abortion date
+            $abortion_date = $horizon_date;
+            if (!empty($mandate['end_date'])) {
+                $abortion_date = min($abortion_date, $mandate['end_date']);
+            }
+            if (!empty($mandate['cancel_date'])) {
+                $abortion_date = min($abortion_date, $mandate['cancel_date']);
+            }
+
+            $collection_dates = [];
+            while ($next_collection < $abortion_date) {
+                // collect this one for writing out
+                if ($next_collection >= $today) {
+                    $collection_dates[] = $next_collection;
+                }
+
+                // move on to the next one
+                $next_collection = date('Y-m-d', strtotime("{$next_collection} + {$mandate['frequency_interval']} {$mandate['frequency_unit']}"));
+            }
+
+            // write out
+            if (!empty($collection_dates)) {
+                $values = [];
+                $template = "({$active_mandates->mandate_id},{$active_mandates->mandate_contact_id},{$active_mandates->rc_financial_type_id},{$active_mandates->rc_amount},DATE('%s'))";
+                foreach ($collection_dates as $collection_date) {
+                    // TODO: defer?
+                    $values[] = sprintf($template, $collection_date);
+                }
+                // write out
+                CRM_Core_DAO::executeQuery("INSERT INTO `{$table_name}`(mandate_id,contact_id,financial_type_id,amount,collection_date) VALUES " . implode(',',$values));
+            }
+        } // on to the next mandate
 
         // we're done:
+        Civi::log()->debug(sprintf("Created SEPA Forecast data table '%s' in %.1fs", $table_name, microtime(true) - $creation_timestamp));
         return $table_name;
     }
 }
