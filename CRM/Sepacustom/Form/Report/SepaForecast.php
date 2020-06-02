@@ -20,52 +20,85 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 {
 
     protected $_addressField = false;
-
     protected $_emailField = false;
-
     protected $_summary = null;
-
     protected $_customGroupExtends = [];
     protected $_customGroupGroupBy = false;
 
     function __construct()
     {
-        $this->getCollectionsTable();
-        $this->_columns     = array(
-            'civicrm_contact'           => array(
-                'dao'      => 'CRM_Contact_DAO_Contact',
-                'fields'   => array(
-                    'sort_name'  => array(
-                        'title'     => E::ts('Contact Name'),
-                        'required'  => true,
-                        'default'   => true,
-                        'no_repeat' => true,
-                    ),
-                    'id'         => array(
-                        'no_display' => true,
-                        'required'   => true,
-                    ),
-                    'first_name' => array(
-                        'title'     => E::ts('First Name'),
-                        'no_repeat' => true,
-                    ),
-                    'last_name'  => array(
-                        'title'     => E::ts('Last Name'),
-                        'no_repeat' => true,
-                    ),
-                ),
-                'filters'  => array(
-                    'sort_name' => array(
-                        'title'    => E::ts('Contact Name'),
-                        'operator' => 'like',
-                    ),
-                    'id'        => array(
-                        'no_display' => true,
-                    ),
-                ),
-                'grouping' => 'contact-fields',
-            ),
-        );
+        $stats_table = $this->getCollectionsTable();
+        $this->_columns     = [
+            'sdd_collection_forecast' => [
+                'table' => $stats_table,
+                'fields' => [
+                    'financial_type_id' => [
+                        'name' => 'financial_type_id',
+                        'title' => E::ts("Financial Type"),
+                    ],
+                    'creditor_id' => [
+                        'title' => E::ts("Creditor"),
+                    ],
+                    'sum_amount' => [
+                        'title' => E::ts("Total Amount"),
+                    ],
+                    'avg_amount' => [
+                        'title' => E::ts("Average Amount"),
+                    ],
+                    'contribution_count' => [
+                        'title' => E::ts("Contribution Count"),
+                    ],
+                    'contact_count' => [
+                        'title' => E::ts("Contact Count"),
+                    ],
+                ],
+                'filters' => [
+                    'horizon' => [
+                        'name' => 'horizon',
+                        'title' => E::ts("Horizon"),
+                        'operatorType' => CRM_Report_Form::OP_SELECT,
+                        'default' => '+1 year',
+                        'options' => [
+                            '+1 month' => E::ts("1 month"),
+                            '+6 month' => E::ts("6 months"),
+                            '+1 year'  => E::ts("1 year"),
+                            '+2 year'  => E::ts("2 years"),
+                            '+5 year'  => E::ts("5 years"),
+                        ],
+                    ],
+                    'financial_type_id' => [
+                        'name' => 'financial_type_id',
+                        'title' => E::ts("Financial Type"),
+                        'type' => CRM_Utils_Type::T_INT,
+                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+                        'options' => CRM_Financial_BAO_FinancialType::getAllAvailableFinancialTypes(),
+                    ],
+                    'creditor_id' => [
+                        'title' => E::ts("Creditor"),
+                        'type' => CRM_Utils_Type::T_INT,
+                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+                        'options' => $this->getAllCreditors(),
+                    ],
+                ],
+                'group_bys' => [
+                    'collection_date' => [
+                        'name' => 'collection_date',
+                        'title' => E::ts("Collection Date"),
+                        'frequency' => true,
+                        []
+                    ],
+                    'financial_type_id' => [
+                        'name' => 'financial_type_id',
+                        'title' => E::ts("Financial Type"),
+                    ],
+                    'creditor_id' => [
+                        'name' => 'creditor_id',
+                        'title' => E::ts("Creditor"),
+                    ],
+                ],
+            ]
+        ];
+
         $this->_groupFilter = true;
         $this->_tagFilter   = true;
         parent::__construct();
@@ -85,25 +118,24 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
         $collections = $this->getCollectionsTable();
 
         $this->_from = "
-         FROM  {$collections} sepa_collections
-         INNER JOIN civicrm_contact {$this->_aliases['civicrm_contact']} {$this->_aclFrom}
-                          ON {$this->_aliases['civicrm_contact']}.id = sepa_collections.contact_id
+         FROM  {$collections} sdd_collection_forecast
+         LEFT JOIN civicrm_contact {$this->_aliases['civicrm_contact']} ON {$this->_aliases['civicrm_contact']}.id = sdd_collection_forecast.contact_id
         ";
     }
 
     /**
-     * Add field specific select alterations.
-     *
-     * @param string $tableName
-     * @param string $tableKey
-     * @param string $fieldName
-     * @param array $field
-     *
-     * @return string
+     * Generate the SELECT clause and set class variable $_select.
      */
-    function selectClause(&$tableName, $tableKey, &$fieldName, &$field)
+    public function select()
     {
-        return parent::selectClause($tableName, $tableKey, $fieldName, $field);
+        $this->_selectClauses = ["mandate_id AS mandate_id"];
+        $this->_select = "SELECT " . implode(', ', $this->_selectClauses) . " ";
+    }
+
+    public function groupBy()
+    {
+        //parent::groupBy(); // TODO: Change the autogenerated stub
+        $this->_groupBy = null;
     }
 
     /**
@@ -193,6 +225,33 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                 break;
             }
         }
+    }
+
+    /**
+     * Return a list of all creditors
+     *
+     * @return array
+     *      creditor id -> label
+     */
+    protected function getAllCreditors() {
+        $creditor_list = [];
+        $query = civicrm_api3(
+            'SepaCreditor',
+            'get',
+            [
+                'option.limit' => 0,
+                'return'       => 'id,name,label'
+            ]
+        );
+        foreach ($query['values'] as $creditor) {
+            if (empty($creditor['label'])) {
+                $creditor_list[$creditor['id']] = $creditor['name'];
+            } else {
+                $creditor_list[$creditor['id']] = $creditor['label'];
+            }
+        }
+
+        return $creditor_list;
     }
 
     /**
