@@ -212,7 +212,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 
         // step one: find existing collection tables
         $candidates = [];
-        $candidate_query = CRM_Core_DAO::executeQuery("SHOW TABLES LIKE 'sdd_forecast_%'");
+        $DSN = DB::parseDSN(CRM_Core_Config::singleton()->dsn);
+        $candidate_query = CRM_Core_DAO::executeQuery("SELECT table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{$DSN['database']}' AND TABLE_NAME LIKE 'sdd_forecast_%';");
         while ($candidate_query->fetch()) {
             $table_name = $candidate_query->table_name;
             if (preg_match('/sdd_forecast_[0-9]{14}_[0-9]+/', $table_name)) {
@@ -224,10 +225,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
         $timestamp_now = date("YmdHis");
         foreach (array_keys($candidates) as $index) {
             $table_name = $candidates[$index];
-            if (preg_match('/sdd_forecast_[0-9]{14}_[0-9]+/', $table_name, $match)) {
-                if ($match[0] < $timestamp_now) {
+            if (preg_match('/sdd_forecast_(?P<timestamp>[0-9]{14})_[0-9]+/', $table_name, $match)) {
+                if ($match['timestamp'] < $timestamp_now) {
                     // expired: delete that (old) table
-                    CRM_Core_DAO::executeQuery("DROP TABLE %1;", [1 => [$table_name, 'String']]);
+                    CRM_Core_DAO::executeQuery("DROP TABLE `{$table_name}`;");
                     unset($candidates[$index]);
                 }
             }
@@ -236,8 +237,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
         // step three: from the ones with the right horizon...
         $valid_candidates = [];
         foreach ($candidates as $table_name) {
-            if (preg_match('/sdd_forecast_[0-9]{14}_[0-9]+/', $table_name, $match)) {
-                if ($match[1] >= $horizon) {
+            if (preg_match('/sdd_forecast_[0-9]{14}_(?P<horizon>[0-9]+)/', $table_name, $match)) {
+                if ($match['horizon'] >= $horizon) {
                     // that one has a big enough horizon
                     $valid_candidates[] = $table_name;
                 }
