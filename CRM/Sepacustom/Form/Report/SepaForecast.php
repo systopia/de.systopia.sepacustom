@@ -32,13 +32,6 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             'sdd_collection_forecast' => [
                 'table' => $stats_table,
                 'fields' => [
-                    'financial_type_id' => [
-                        'name' => 'financial_type_id',
-                        'title' => E::ts("Financial Type"),
-                    ],
-                    'creditor_id' => [
-                        'title' => E::ts("Creditor"),
-                    ],
                     'sum_amount' => [
                         'title' => E::ts("Total Amount"),
                     ],
@@ -50,6 +43,13 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                     ],
                     'contact_count' => [
                         'title' => E::ts("Contact Count"),
+                    ],
+                    'financial_type_id' => [
+                        'name' => 'financial_type_id',
+                        'title' => E::ts("Financial Type"),
+                    ],
+                    'creditor_id' => [
+                        'title' => E::ts("Creditor"),
                     ],
                 ],
                 'filters' => [
@@ -85,7 +85,6 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                         'name' => 'collection_date',
                         'title' => E::ts("Collection Date"),
                         'frequency' => true,
-                        []
                     ],
                     'financial_type_id' => [
                         'name' => 'financial_type_id',
