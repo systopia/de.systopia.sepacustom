@@ -18,12 +18,7 @@ use CRM_Sepacustom_ExtensionUtil as E;
 
 class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 {
-
-    protected $_addressField = false;
-    protected $_emailField = false;
     protected $_summary = null;
-    protected $_customGroupExtends = [];
-    protected $_customGroupGroupBy = false;
 
     function __construct()
     {
@@ -66,25 +61,28 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                             '+5 year'  => E::ts("5 years"),
                         ],
                     ],
-                    'financial_type_id' => [
-                        'name' => 'financial_type_id',
-                        'title' => E::ts("Financial Type"),
-                        'type' => CRM_Utils_Type::T_INT,
-                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
-                        'options' => CRM_Financial_BAO_FinancialType::getAllAvailableFinancialTypes(),
-                    ],
-                    'creditor_id' => [
-                        'title' => E::ts("Creditor"),
-                        'type' => CRM_Utils_Type::T_INT,
-                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
-                        'options' => $this->getAllCreditors(),
-                    ],
+//                    'financial_type_id' => [
+//                        'name' => 'financial_type_id',
+//                        'title' => E::ts("Financial Type"),
+//                        'type' => CRM_Utils_Type::T_INT,
+//                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+//                        'options' => CRM_Financial_BAO_FinancialType::getAllAvailableFinancialTypes(),
+//                    ],
+//                    'creditor_id' => [
+//                        'title' => E::ts("Creditor"),
+//                        'type' => CRM_Utils_Type::T_INT,
+//                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+//                        'options' => $this->getAllCreditors(),
+//                    ],
                 ],
                 'group_bys' => [
                     'collection_date' => [
                         'name' => 'collection_date',
                         'title' => E::ts("Collection Date"),
+                        'default' => true,
                         'frequency' => true,
+                        'chart' => true,
+//                        'type' => 12,
                     ],
                     'financial_type_id' => [
                         'name' => 'financial_type_id',
@@ -100,6 +98,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 
         $this->_groupFilter = true;
         $this->_tagFilter   = true;
+        $this->_aliases['civicrm_contact'] = 'sdd_collection_contact';
         parent::__construct();
     }
 
@@ -127,14 +126,109 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
      */
     public function select()
     {
-        $this->_selectClauses = ["mandate_id AS mandate_id"];
+        // start with collection date frame
+        if (!empty($this->_params['group_bys']['collection_date'])) {
+            switch ($this->_params['group_bys_freq']['collection_date']) {
+                case 'YEARWEEK':
+                    $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), 'W', WEEK(sdd_collection_forecast.collection_date)) AS date_frame"];
+                    break;
+
+                default:
+                case 'MONTH':
+                $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', MONTH(sdd_collection_forecast.collection_date)) AS date_frame"];
+                    break;
+
+                case 'QUARTER':
+                    $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), 'Q', QUARTER(sdd_collection_forecast.collection_date)) AS date_frame"];
+                    break;
+
+                case 'YEAR':
+                    $this->_selectClauses = ["YEAR(sdd_collection_forecast.collection_date) AS date_frame"];
+                    break;
+            }
+        } else { // default is month
+            $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', MONTH(sdd_collection_forecast.collection_date)) AS date_frame"];
+        }
+        $this->_columnHeaders['date_frame'] = [
+            'title' => E::ts("Time Frame"),
+            'type' => CRM_Utils_Type::T_STRING,
+        ];
+
+        if (!empty($this->_params['fields']['sum_amount'])) {
+            $this->_selectClauses[] = "SUM(sdd_collection_forecast.amount) AS sum_amount";
+            $this->_columnHeaders['sum_amount'] = [
+                'title' => E::ts("Total Amount"),
+                'type' => CRM_Utils_Type::T_MONEY,
+            ];
+        }
+        if (!empty($this->_params['fields']['avg_amount'])) {
+            $this->_selectClauses[] = "AVG(sdd_collection_forecast.amount) AS avg_amount";
+            $this->_columnHeaders['avg_amount'] = [
+                'title' => E::ts("Average Amount"),
+                'type' => CRM_Utils_Type::T_MONEY,
+            ];
+        }
+        if (!empty($this->_params['fields']['contribution_count'])) {
+            $this->_selectClauses[] = "COUNT(*) AS contribution_count";
+            $this->_columnHeaders['contribution_count'] = [
+                'title' => E::ts("Individual Contributions"),
+                'type' => CRM_Utils_Type::T_INT,
+            ];
+        }
+        if (!empty($this->_params['fields']['contact_count'])) {
+            $this->_selectClauses[] = "COUNT(DISTINCT(sdd_collection_forecast.contact_id)) AS contact_count";
+            $this->_columnHeaders['contact_count'] = [
+                'title' => E::ts("Individual Contacts"),
+                'type' => CRM_Utils_Type::T_INT,
+            ];
+        }
+
         $this->_select = "SELECT " . implode(', ', $this->_selectClauses) . " ";
     }
 
     public function groupBy()
     {
-        //parent::groupBy(); // TODO: Change the autogenerated stub
         $this->_groupBy = null;
+        $group_bys = [];
+
+        // add collection date grouping
+        if (!empty($this->_params['group_bys']['collection_date'])) {
+            switch ($this->_params['group_bys_freq']['collection_date']) {
+                case 'YEARWEEK':
+                    $group_bys[] = "YEAR(sdd_collection_forecast.collection_date), WEEK(sdd_collection_forecast.collection_date)";
+                    break;
+
+                default:
+                case 'MONTH':
+                    $group_bys[] = "YEAR(sdd_collection_forecast.collection_date), MONTH(sdd_collection_forecast.collection_date)";
+                    break;
+
+                case 'QUARTER':
+                    $group_bys[] = "YEAR(sdd_collection_forecast.collection_date), QUARTER(sdd_collection_forecast.collection_date)";
+                    break;
+
+                case 'YEAR':
+                    $group_bys[] = "YEAR(sdd_collection_forecast.collection_date)";
+                    break;
+            }
+        } else { // default is month
+            $group_bys[] = "YEAR(sdd_collection_forecast.collection_date), MONTH(sdd_collection_forecast.collection_date)";
+        }
+
+        // add financial type grouping
+        if (!empty($this->_params['group_bys']['financial_type_id'])) {
+            $group_bys[] = "sdd_collection_forecast.financial_type_id";
+        }
+
+        // add creditor ID grouping
+        if (!empty($this->_params['group_bys']['creditor_id'])) {
+            $group_bys[] = "sdd_collection_forecast.creditor_id";
+        }
+
+        // finally: compile the group by clause
+        if (!empty($group_bys)) {
+            $this->_groupBy = 'GROUP BY ' . implode(', ', $group_bys);
+        }
     }
 
     /**
@@ -152,8 +246,16 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
      */
     public function whereClause(&$field, $op, $value, $min, $max)
     {
-        return parent::whereClause($field, $op, $value, $min, $max);
+        $this->_where = ' TRUE ';
     }
+
+    /**
+     * Modify column headers.
+     */
+    public function modifyColumnHeaders() {
+        // use this method to modify $this->_columnHeaders
+    }
+
 
     function alterDisplay(&$rows)
     {
@@ -263,7 +365,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
      */
     protected function getCollectionsTable()
     {
-        $now         = 'now';
+        $now         = strtotime('now');
         $today       = date('Y-m-d');
         $horizon     = (int) 100;  // TODO: option
         $ttl_seconds = (int) 3600; // TODO: option

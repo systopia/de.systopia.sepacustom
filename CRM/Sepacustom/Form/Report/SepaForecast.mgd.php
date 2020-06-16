@@ -22,7 +22,7 @@ return [
         'params' =>
             [
                 'version'     => 3,
-                'label'       => E::ts("Sepa Forecast"),
+                'label'       => E::ts("SEPA Forecast"),
                 'description' => E::ts("Forecast of CiviSEPA collections"),
                 'class_name'  => 'CRM_Sepacustom_Form_Report_SepaForecast',
                 'report_url'  => 'de.systopia.sepacustom/sepaforecast',
