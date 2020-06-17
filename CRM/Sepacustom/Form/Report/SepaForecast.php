@@ -22,10 +22,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 
     function __construct()
     {
-        $stats_table = $this->getCollectionsTable();
         $this->_columns     = [
             'sdd_collection_forecast' => [
-                'table' => $stats_table,
                 'fields' => [
                     'sum_amount' => [
                         'title' => E::ts("Total Amount"),
@@ -39,41 +37,53 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                     'contact_count' => [
                         'title' => E::ts("Contact Count"),
                     ],
-                    'financial_type_id' => [
-                        'name' => 'financial_type_id',
-                        'title' => E::ts("Financial Type"),
-                    ],
-                    'creditor_id' => [
-                        'title' => E::ts("Creditor"),
-                    ],
+//                    'financial_type_id' => [
+//                        'name' => 'financial_type_id',
+//                        'title' => E::ts("Financial Type"),
+//                    ],
+//                    'creditor_id' => [
+//                        'title' => E::ts("Creditor"),
+//                    ],
                 ],
                 'filters' => [
                     'horizon' => [
                         'name' => 'horizon',
                         'title' => E::ts("Horizon"),
                         'operatorType' => CRM_Report_Form::OP_SELECT,
-                        'default' => '+1 year',
+                        'default' => '1 year',
                         'options' => [
-                            '+1 month' => E::ts("1 month"),
-                            '+6 month' => E::ts("6 months"),
-                            '+1 year'  => E::ts("1 year"),
-                            '+2 year'  => E::ts("2 years"),
-                            '+5 year'  => E::ts("5 years"),
+                            '1 month' => E::ts("1 month"),
+                            '6 month' => E::ts("6 months"),
+                            '1 year'  => E::ts("1 year"),
+                            '2 year'  => E::ts("2 years"),
+                            '5 year'  => E::ts("5 years"),
                         ],
                     ],
-//                    'financial_type_id' => [
-//                        'name' => 'financial_type_id',
-//                        'title' => E::ts("Financial Type"),
-//                        'type' => CRM_Utils_Type::T_INT,
-//                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
-//                        'options' => CRM_Financial_BAO_FinancialType::getAllAvailableFinancialTypes(),
-//                    ],
-//                    'creditor_id' => [
-//                        'title' => E::ts("Creditor"),
-//                        'type' => CRM_Utils_Type::T_INT,
-//                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
-//                        'options' => $this->getAllCreditors(),
-//                    ],
+                    'caching' => [
+                        'name' => 'caching',
+                        'title' => E::ts("Caching"),
+                        'operatorType' => CRM_Report_Form::OP_SELECT,
+                        'default' => '604800', # one week
+                        'options' => [
+                            '0'       => E::ts("no caching"),
+                            '86400'   => E::ts("1 day"),
+                            '604800'  => E::ts("1 week"),
+                            '2678400' => E::ts("1 month"),
+                        ],
+                    ],
+                    'financial_type_id' => [
+                        'name' => 'financial_type_id',
+                        'title' => E::ts("Financial Type"),
+                        'type' => CRM_Utils_Type::T_INT,
+                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+                        'options' => CRM_Financial_BAO_FinancialType::getAllAvailableFinancialTypes(),
+                    ],
+                    'creditor_id' => [
+                        'title' => E::ts("Creditor"),
+                        'type' => CRM_Utils_Type::T_INT,
+                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+                        'options' => $this->getAllCreditors(),
+                    ],
                 ],
                 'group_bys' => [
                     'collection_date' => [
@@ -82,16 +92,15 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                         'default' => true,
                         'frequency' => true,
                         'chart' => true,
-//                        'type' => 12,
                     ],
                     'financial_type_id' => [
                         'name' => 'financial_type_id',
                         'title' => E::ts("Financial Type"),
                     ],
-                    'creditor_id' => [
-                        'name' => 'creditor_id',
-                        'title' => E::ts("Creditor"),
-                    ],
+//                    'creditor_id' => [
+//                        'name' => 'creditor_id',
+//                        'title' => E::ts("Creditor"),
+//                    ],
                 ],
             ]
         ];
@@ -112,8 +121,14 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
     {
         $this->_from = null;
 
-        // get pre-calculated collection table
-        $collections = $this->getCollectionsTable();
+
+        // get (hopefully) pre-calculated collection table
+        $horizon = CRM_Utils_Array::value('horizon_value', $this->_params, '1 year');
+        $caching = CRM_Utils_Array::value('caching_value', $this->_params, '604800');
+        $from_date = $this->getAlignedStartDate();
+        $to_date   = date('Y-m-d', strtotime("{$from_date} + {$horizon} - 1 day"));
+        $min_creation_time = date('YmdHis', strtotime("now - {$caching} seconds"));
+        $collections = $this->getCollectionsTable($from_date, $to_date, $min_creation_time);
 
         $this->_from = "
          FROM  {$collections} sdd_collection_forecast
@@ -244,9 +259,39 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
      *
      * @return null|string
      */
-    public function whereClause(&$field, $op, $value, $min, $max)
+    public function where()
     {
-        $this->_where = ' TRUE ';
+        $where_clauses = [];
+
+        // add time restrictions
+        $from_date = $this->getAlignedStartDate();
+        $horizon = CRM_Utils_Array::value('horizon_value', $this->_params, '1 year');
+        $to_date   = date('Y-m-d', strtotime("{$from_date} + {$horizon} - 1 day"));
+        $where_clauses[] = "DATE(sdd_collection_forecast.collection_date) >= DATE('{$from_date}')";
+        $where_clauses[] = "DATE(sdd_collection_forecast.collection_date) <= DATE('{$to_date}')";
+
+        // add financial_type restriction
+        if (!empty($this->_params['financial_type_id_value'])) {
+            $values = implode(',', $this->_params['financial_type_id_value']);
+            if ($this->_params['financial_type_id_op'] == 'in') {
+                $where_clauses[] = "sdd_collection_forecast.financial_type_id IN ($values)";
+            } else {
+                $where_clauses[] = "sdd_collection_forecast.financial_type_id NOT IN ($values)";
+            }
+        }
+
+        // add creditor restriction
+        if (!empty($this->_params['creditor_id_value'])) {
+            $values = implode(',', $this->_params['creditor_id_value']);
+            if ($this->_params['creditor_id_op'] == 'in') {
+                $where_clauses[] = "sdd_collection_forecast.creditor_id IN ($values)";
+            } else {
+                $where_clauses[] = "sdd_collection_forecast.creditor_id NOT IN ($values)";
+            }
+        }
+
+        $this->_where = 'WHERE (' . implode(') AND (', $where_clauses) . ')';
+        $this->_having = "";
     }
 
     /**
@@ -329,6 +374,51 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
     }
 
     /**
+     * Get the start date of the given period, e.g.
+     *   first of next week/month/quarter/year
+     *
+     * @return string start date of the next period
+     */
+    protected function getAlignedStartDate()
+    {
+        // start with now:
+        $start_date = strtotime('now');
+
+        // add collection date grouping
+        if (!empty($this->_params['group_bys']['collection_date'])) {
+            switch ($this->_params['group_bys_freq']['collection_date']) {
+                case 'YEARWEEK':
+                    while (date('w', $start_date) <> 0) {
+                        $start_date = strtotime("+1 day", $start_date);
+                    }
+                    break;
+
+                default:
+                case 'MONTH':
+                    while (date('d', $start_date) <> 1) {
+                        $start_date = strtotime("+1 day", $start_date);
+                    }
+                    break;
+
+                case 'QUARTER':
+                    while (date('d', $start_date) <> 1 && !in_array(date('m', $start_date), [1,4,7,10])) {
+                        $start_date = strtotime("+1 day", $start_date);
+                    }
+                    break;
+
+                case 'YEAR':
+                    $start_date = strtotime(date('Y', $start_date) . '-01-01 + 1 year');
+                    break;
+            }
+        } else { // default is month
+            while (date('d', $start_date) <> 1) {
+                $start_date = strtotime("+1 day", $start_date);
+            }
+        }
+        return date('Y-m-d', $start_date);
+    }
+
+    /**
      * Return a list of all creditors
      *
      * @return array
@@ -358,17 +448,31 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
     /**
      * Make sure the table of all predicted collections is there and return the table name
      *
-     * Table name pattern is sdd_forecast_<timeout>_<horizon>
+     * Table name pattern is sdd_forecast_<creation>_<from>_<to>
+     *
+     * @param integer $horizon
+     *     horizon / timeframe in days
+     *
+     * @param integer $max_age
+     *     maximum age of table in seconds
      *
      * @return string
      *      name of the table to use
      */
-    protected function getCollectionsTable()
+    protected function getCollectionsTable($from_date, $to_date, $min_creation_time)
     {
-        $now         = strtotime('now');
-        $today       = date('Y-m-d');
-        $horizon     = (int) 100;  // TODO: option
-        $ttl_seconds = (int) 3600; // TODO: option
+        // some basic data
+        $now           = strtotime('now');
+        $today         = date('Y-m-d');
+        $buffer        = '1 month';
+        $table_pattern = '/^sdd_forecast_(?P<timestamp>[0-9]{14})_(?P<from>[0-9]{8})_(?P<to>[0-9]{8})$/';
+
+        // normalise input
+        $min_creation_time  = date('YmdHis', strtotime($min_creation_time));
+        $from_date          = date('Ymd', strtotime($from_date));
+        $min_date           = date('Y-m-d', strtotime($from_date));
+        $to_date            = date('Ymd', strtotime($to_date));
+        $max_date           = date('Y-m-d', strtotime($to_date));
 
         // step one: find existing collection tables
         $candidates = [];
@@ -376,17 +480,17 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
         $candidate_query = CRM_Core_DAO::executeQuery("SELECT table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{$DSN['database']}' AND TABLE_NAME LIKE 'sdd_forecast_%';");
         while ($candidate_query->fetch()) {
             $table_name = $candidate_query->table_name;
-            if (preg_match('/sdd_forecast_[0-9]{14}_[0-9]+/', $table_name)) {
+            if (preg_match($table_pattern, $table_name)) {
                 $candidates[] = $table_name;
             }
         }
 
         // step one: delete all outdated tables
-        $timestamp_now = date("YmdHis");
+        $purge_date = date('YmdHis', strtotime('now -1 month'));
         foreach (array_keys($candidates) as $index) {
             $table_name = $candidates[$index];
-            if (preg_match('/sdd_forecast_(?P<timestamp>[0-9]{14})_[0-9]+/', $table_name, $match)) {
-                if ($match['timestamp'] < $timestamp_now) {
+            if (preg_match($table_pattern, $table_name, $match)) {
+                if ($match['timestamp'] < $purge_date) {
                     // expired: delete that (old) table
                     CRM_Core_DAO::executeQuery("DROP TABLE `{$table_name}`;");
                     unset($candidates[$index]);
@@ -397,8 +501,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
         // step three: from the ones with the right horizon...
         $valid_candidates = [];
         foreach ($candidates as $table_name) {
-            if (preg_match('/sdd_forecast_[0-9]{14}_(?P<horizon>[0-9]+)/', $table_name, $match)) {
-                if ($match['horizon'] >= $horizon) {
+            if (preg_match($table_pattern, $table_name, $match)) {
+                if (   $match['timestamp'] >= $min_creation_time
+                    && $match['from']      <= $from_date
+                    && $match['to']        >= $to_date) {
                     // that one has a big enough horizon
                     $valid_candidates[] = $table_name;
                 }
@@ -412,9 +518,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
         }
 
         // step four: there is no such table => create one
-        $timeout = date('YmdHis', strtotime("now + {$ttl_seconds} seconds"));
-        $horizon_date = date('YmdHis', strtotime("now + {$horizon} days"));
-        $table_name = "sdd_forecast_{$timeout}_{$horizon}";
+        $creation_timestamp = date('YmdHis');
+        $table_name         = "sdd_forecast_{$creation_timestamp}_{$from_date}_{$to_date}";
+
         $creation_timestamp = microtime(true);
         CRM_Core_DAO::executeQuery("
         CREATE TABLE `{$table_name}` (
@@ -467,17 +573,18 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                 'mandate_first_executed' => $active_mandates->mandate_first_executed,
                 'end_date'               => $active_mandates->end_date,
                 'cancel_date'            => $active_mandates->cancel_date,
+                'status'                 => $active_mandates->status,
             ];
 
             // calculate next collection
             $next_collection = CRM_Sepa_Logic_Batching::getNextExecutionDate(
                 $mandate,
                 $now,
-                $mandate->status
+                $mandate['status']
             );
 
             // calculate abortion date
-            $abortion_date = $horizon_date;
+            $abortion_date = $max_date;
             if (!empty($mandate['end_date'])) {
                 $abortion_date = min($abortion_date, $mandate['end_date']);
             }
@@ -488,7 +595,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             $collection_dates = [];
             while ($next_collection < $abortion_date) {
                 // collect this one for writing out
-                if ($next_collection >= $today) {
+                if ($next_collection >= $min_date) {
                     $collection_dates[] = $next_collection;
                 }
 
