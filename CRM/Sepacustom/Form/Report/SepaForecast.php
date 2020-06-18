@@ -106,8 +106,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             ]
         ];
 
-        $this->_groupFilter = true;
-        $this->_tagFilter   = true;
+        $this->_groupFilter = false;
+        $this->_tagFilter   = false;
         $this->_aliases['civicrm_contact'] = 'sdd_collection_contact';
         parent::__construct();
     }
@@ -156,7 +156,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
 
                 default:
                 case 'MONTH':
-                $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', LPAD(MONTH(sdd_collection_forecast.collection_date)), 2, 0) AS date_frame"];
+                $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', LPAD(MONTH(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame"];
                     break;
 
                 case 'QUARTER':
