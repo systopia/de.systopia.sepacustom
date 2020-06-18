@@ -85,6 +85,12 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                         'operatorType' => CRM_Report_Form::OP_MULTISELECT,
                         'options' => $this->getAllCreditors(),
                     ],
+                    'campaign_id' => [
+                        'title' => E::ts("Campaign"),
+                        'type' => CRM_Utils_Type::T_INT,
+                        'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+                        'options' => $this->getAllCampaigns(),
+                    ],
                 ],
                 'group_bys' => [
                     'collection_date' => [
@@ -296,6 +302,16 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             }
         }
 
+        // add campaign restriction
+        if (!empty($this->_params['campaign_id_value'])) {
+            $values = implode(',', $this->_params['campaign_id_value']);
+            if ($this->_params['campaign_id_op'] == 'in') {
+                $where_clauses[] = "sdd_collection_forecast.campaign_id IN ($values)";
+            } else {
+                $where_clauses[] = "sdd_collection_forecast.campaign_id NOT IN ($values) OR sdd_collection_forecast.campaign_id IS NULL";
+            }
+        }
+
         $this->_where = 'WHERE (' . implode(') AND (', $where_clauses) . ')';
         $this->_having = "";
     }
@@ -386,6 +402,29 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
     }
 
     /**
+     * Return a list of all campaigns
+     *
+     * @return array
+     *      campaign id -> title
+     */
+    protected function getAllCampaigns() {
+        $campaign_list = [];
+        $query = civicrm_api3(
+            'Campaign',
+            'get',
+            [
+                'option.limit' => 0,
+                'return'       => 'id,title'
+            ]
+        );
+        foreach ($query['values'] as $campaign) {
+            $campaign_list[$campaign['id']] = $campaign['title'];
+        }
+
+        return $campaign_list;
+    }
+
+    /**
      * Make sure the table of all predicted collections is there and return the table name
      *
      * Table name pattern is sdd_forecast_<creation>_<from>_<to>
@@ -467,11 +506,13 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
          `mandate_id`          int unsigned        COMMENT 'ID of the mandate that created this',
          `contact_id`          int unsigned        COMMENT 'ID of the contact owning the mandate',
          `creditor_id`         int unsigned        COMMENT 'ID of the mandate creditor',
+         `campaign_id`         int unsigned        COMMENT 'ID of the mandate campaign',
          `financial_type_id`   int(10) unsigned    COMMENT 'financial type of the mandate',
          `amount`              decimal(20,2)       COMMENT 'amount to be collected',
          `collection_date`     datetime            COMMENT 'date when the amount is collected',
          INDEX `mandate_id` (mandate_id),
          INDEX `creditor_id` (creditor_id),
+         INDEX `campaign_id` (campaign_id),
          INDEX `contact_id` (contact_id),
          INDEX `financial_type_id` (financial_type_id),
          INDEX `amount` (amount),
@@ -485,6 +526,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             mandate.id                       AS mandate_id,
             mandate.contact_id               AS mandate_contact_id,
             mandate.creditor_id              AS mandate_creditor_id,
+            rcontribution.campaign_id        AS mandate_campaign_id,
             rcontribution.financial_type_id  AS rc_financial_type_id,
             rcontribution.amount             AS rc_amount,
             mandate.creditor_id              AS mandate_creditor_id,
@@ -522,8 +564,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             // calculate next collection
             $next_collection = CRM_Sepa_Logic_Batching::getNextExecutionDate(
                 $mandate,
-                'now',
-                $mandate['status'] == 'FRST'
+                $now,
+                ($mandate['status'] == 'FRST')
             );
 
             // calculate abortion date
@@ -549,13 +591,14 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             // write out
             if (!empty($collection_dates)) {
                 $values = [];
-                $template = "({$active_mandates->mandate_id},{$active_mandates->mandate_contact_id},{$active_mandates->mandate_creditor_id},{$active_mandates->rc_financial_type_id},{$active_mandates->rc_amount},DATE('%s'))";
+                $campaign_id = empty($active_mandates->mandate_campaign_id) ? 'NULL' : (int) $active_mandates->mandate_campaign_id;
+                $template = "({$active_mandates->mandate_id},{$active_mandates->mandate_contact_id},{$active_mandates->mandate_creditor_id},{$campaign_id},{$active_mandates->rc_financial_type_id},{$active_mandates->rc_amount},DATE('%s'))";
                 foreach ($collection_dates as $collection_date) {
                     // TODO: defer?
                     $values[] = sprintf($template, $collection_date);
                 }
                 // write out
-                CRM_Core_DAO::executeQuery("INSERT INTO `{$table_name}`(mandate_id,contact_id,creditor_id,financial_type_id,amount,collection_date) VALUES " . implode(',',$values));
+                CRM_Core_DAO::executeQuery("INSERT INTO `{$table_name}`(mandate_id,contact_id,creditor_id,campaign_id,financial_type_id,amount,collection_date) VALUES " . implode(',',$values));
             }
         } // on to the next mandate
 
