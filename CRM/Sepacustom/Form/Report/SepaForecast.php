@@ -27,6 +27,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                 'fields' => [
                     'sum_amount' => [
                         'title' => E::ts("Total Amount"),
+                        'default' => 1
                     ],
                     'avg_amount' => [
                         'title' => E::ts("Average Amount"),
@@ -93,10 +94,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                         'frequency' => true,
                         'chart' => true,
                     ],
-                    'financial_type_id' => [
-                        'name' => 'financial_type_id',
-                        'title' => E::ts("Financial Type"),
-                    ],
+//                    'financial_type_id' => [
+//                        'name' => 'financial_type_id',
+//                        'title' => E::ts("Financial Type"),
+//                    ],
 //                    'creditor_id' => [
 //                        'name' => 'creditor_id',
 //                        'title' => E::ts("Creditor"),
@@ -141,16 +142,21 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
      */
     public function select()
     {
+        // if no columns selected, add the amount
+        if (empty($this->_params['fields'])) {
+            $this->_params['fields'] = ['sum_amount' => 1];
+        }
+
         // start with collection date frame
         if (!empty($this->_params['group_bys']['collection_date'])) {
             switch ($this->_params['group_bys_freq']['collection_date']) {
                 case 'YEARWEEK':
-                    $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), 'W', WEEK(sdd_collection_forecast.collection_date)) AS date_frame"];
+                    $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), 'W', LPAD(WEEK(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame"];
                     break;
 
                 default:
                 case 'MONTH':
-                $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', MONTH(sdd_collection_forecast.collection_date)) AS date_frame"];
+                $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', LPAD(MONTH(sdd_collection_forecast.collection_date)), 2, 0) AS date_frame"];
                     break;
 
                 case 'QUARTER':
@@ -162,7 +168,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
                     break;
             }
         } else { // default is month
-            $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', MONTH(sdd_collection_forecast.collection_date)) AS date_frame"];
+            $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', LPAD(MONTH(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame"];
         }
         $this->_columnHeaders['date_frame'] = [
             'title' => E::ts("Time Frame"),
@@ -526,6 +532,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
         CREATE TABLE `{$table_name}` (
          `mandate_id`          int unsigned        COMMENT 'ID of the mandate that created this',
          `contact_id`          int unsigned        COMMENT 'ID of the contact owning the mandate',
+         `creditor_id`         int unsigned        COMMENT 'ID of the mandate creditor',
          `financial_type_id`   int(10) unsigned    COMMENT 'financial type of the mandate',
          `amount`              decimal(20,2)       COMMENT 'amount to be collected',
          `collection_date`     datetime            COMMENT 'date when the amount is collected',
@@ -542,6 +549,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             -- needed for data:
             mandate.id                       AS mandate_id,
             mandate.contact_id               AS mandate_contact_id,
+            mandate.creditor_id              AS mandate_creditor_id,
             rcontribution.financial_type_id  AS rc_financial_type_id,
             rcontribution.amount             AS rc_amount,
             mandate.creditor_id              AS mandate_creditor_id,
@@ -606,13 +614,13 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             // write out
             if (!empty($collection_dates)) {
                 $values = [];
-                $template = "({$active_mandates->mandate_id},{$active_mandates->mandate_contact_id},{$active_mandates->rc_financial_type_id},{$active_mandates->rc_amount},DATE('%s'))";
+                $template = "({$active_mandates->mandate_id},{$active_mandates->mandate_contact_id},{$active_mandates->mandate_creditor_id},{$active_mandates->rc_financial_type_id},{$active_mandates->rc_amount},DATE('%s'))";
                 foreach ($collection_dates as $collection_date) {
                     // TODO: defer?
                     $values[] = sprintf($template, $collection_date);
                 }
                 // write out
-                CRM_Core_DAO::executeQuery("INSERT INTO `{$table_name}`(mandate_id,contact_id,financial_type_id,amount,collection_date) VALUES " . implode(',',$values));
+                CRM_Core_DAO::executeQuery("INSERT INTO `{$table_name}`(mandate_id,contact_id,creditor_id,financial_type_id,amount,collection_date) VALUES " . implode(',',$values));
             }
         } // on to the next mandate
 
