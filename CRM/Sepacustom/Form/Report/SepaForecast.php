@@ -304,79 +304,13 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
      * Modify column headers.
      */
     public function modifyColumnHeaders() {
-        // use this method to modify $this->_columnHeaders
+        // TODO: use this method to modify $this->_columnHeaders
     }
 
 
     function alterDisplay(&$rows)
     {
-        // custom code to alter rows
-        $entryFound = false;
-        $checkList  = array();
-        foreach ($rows as $rowNum => $row) {
-            if (!empty($this->_noRepeats) && $this->_outputMode != 'csv') {
-                // not repeat contact display names if it matches with the one
-                // in previous row
-                $repeatFound = false;
-                foreach ($row as $colName => $colVal) {
-                    if (CRM_Utils_Array::value($colName, $checkList) &&
-                        is_array($checkList[$colName]) &&
-                        in_array($colVal, $checkList[$colName])
-                    ) {
-                        $rows[$rowNum][$colName] = '';
-                        $repeatFound             = true;
-                    }
-                    if (in_array($colName, $this->_noRepeats)) {
-                        $checkList[$colName][] = $colVal;
-                    }
-                }
-            }
-
-            if (array_key_exists('civicrm_membership_membership_type_id', $row)) {
-                if ($value = $row['civicrm_membership_membership_type_id']) {
-                    $rows[$rowNum]['civicrm_membership_membership_type_id'] = CRM_Member_PseudoConstant::membershipType(
-                        $value,
-                        false
-                    );
-                }
-                $entryFound = true;
-            }
-
-            if (array_key_exists('civicrm_address_state_province_id', $row)) {
-                if ($value = $row['civicrm_address_state_province_id']) {
-                    $rows[$rowNum]['civicrm_address_state_province_id'] = CRM_Core_PseudoConstant::stateProvince(
-                        $value,
-                        false
-                    );
-                }
-                $entryFound = true;
-            }
-
-            if (array_key_exists('civicrm_address_country_id', $row)) {
-                if ($value = $row['civicrm_address_country_id']) {
-                    $rows[$rowNum]['civicrm_address_country_id'] = CRM_Core_PseudoConstant::country($value, false);
-                }
-                $entryFound = true;
-            }
-
-            if (array_key_exists('civicrm_contact_sort_name', $row) &&
-                $rows[$rowNum]['civicrm_contact_sort_name'] &&
-                array_key_exists('civicrm_contact_id', $row)
-            ) {
-                $url                                              = CRM_Utils_System::url(
-                    "civicrm/contact/view",
-                    'reset=1&cid=' . $row['civicrm_contact_id'],
-                    $this->_absoluteUrl
-                );
-                $rows[$rowNum]['civicrm_contact_sort_name_link']  = $url;
-                $rows[$rowNum]['civicrm_contact_sort_name_hover'] = E::ts("View Contact Summary for this Contact.");
-                $entryFound                                       = true;
-            }
-
-            if (!$entryFound) {
-                break;
-            }
-        }
+        // TODO: custom code to alter rows
     }
 
     /**
@@ -537,6 +471,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
          `amount`              decimal(20,2)       COMMENT 'amount to be collected',
          `collection_date`     datetime            COMMENT 'date when the amount is collected',
          INDEX `mandate_id` (mandate_id),
+         INDEX `creditor_id` (creditor_id),
          INDEX `contact_id` (contact_id),
          INDEX `financial_type_id` (financial_type_id),
          INDEX `amount` (amount),
@@ -587,8 +522,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form
             // calculate next collection
             $next_collection = CRM_Sepa_Logic_Batching::getNextExecutionDate(
                 $mandate,
-                $now,
-                $mandate['status']
+                'now',
+                $mandate['status'] == 'FRST'
             );
 
             // calculate abortion date
