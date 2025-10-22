@@ -22,9 +22,9 @@ use CRM_Sepacustom_ExtensionUtil as E;
 function sepacustom_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
   // apply BIC restrictions to new mandates
   if ($formName == 'CRM_Sepa_Form_CreateMandate') {
-    $bic = CRM_Utils_Array::value('bic', $fields);
+    $bic = $fields['bic'] ?? NULL;
     if ($bic) {
-      $creditor_id = CRM_Utils_Array::value('creditor_id', $fields);
+      $creditor_id = $fields['creditor_id'] ?? NULL;
       $bic_error = CRM_Sepacustom_Configuration::getBICRestrictionError($creditor_id, $bic);
       if ($bic_error) {
         $errors['bic'] = $bic_error;
