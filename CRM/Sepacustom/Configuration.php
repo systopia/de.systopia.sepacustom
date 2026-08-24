@@ -29,7 +29,8 @@ class CRM_Sepacustom_Configuration {
     $holidays = Civi::settings()->get('customsepa_bank_holidays');
     if (is_array($holidays)) {
       return $holidays;
-    } else {
+    }
+    else {
       return [];
     }
   }
@@ -48,7 +49,8 @@ class CRM_Sepacustom_Configuration {
     $restrictions = Civi::settings()->get('customsepa_bic_restrictions');
     if (is_array($restrictions)) {
       return $restrictions;
-    } else {
+    }
+    else {
       return [];
     }
   }
@@ -69,7 +71,7 @@ class CRM_Sepacustom_Configuration {
           $match = preg_match("#{$r['pattern']}#", $bic);
           if (($match && $r['match'] == '-') || (!$match && $r['match'] == '+')) {
             // this is a match
-            return empty($r['error']) ? E::ts("Invalid BIC for this creditor") : $r['error'];
+            return empty($r['error']) ? E::ts('Invalid BIC for this creditor') : $r['error'];
           }
         }
       }
@@ -92,4 +94,5 @@ class CRM_Sepacustom_Configuration {
     }
     return $values;
   }
+
 }

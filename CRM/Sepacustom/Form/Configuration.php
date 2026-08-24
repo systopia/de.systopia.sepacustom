@@ -25,46 +25,46 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
   const MAX_BIC_RESTRICTION_COUNT = 10;
 
   public function buildQuickForm() {
-    CRM_Utils_System::setTitle(E::ts("CiviSEPA Customisations"));
+    CRM_Utils_System::setTitle(E::ts('CiviSEPA Customisations'));
 
     // bank holiday field
     $this->add(
       'textarea',
       'bank_holidays',
-      E::ts("Bank Holidays"),
+      E::ts('Bank Holidays'),
       ['class' => 'huge'],
       FALSE
     );
 
     // add BIC restrictions
     $creditors = $this->getCreditors();
-    $this->assign("bic_restrictions", range(0, self::MAX_BIC_RESTRICTION_COUNT));
+    $this->assign('bic_restrictions', range(0, self::MAX_BIC_RESTRICTION_COUNT));
     foreach (range(0, self::MAX_BIC_RESTRICTION_COUNT) as $i) {
       $this->add(
           'select',
           "bic_restriction_creditor_{$i}",
-          E::ts("Creditor"),
+          E::ts('Creditor'),
           $creditors,
           FALSE
       );
       $this->add(
           'select',
           "bic_restriction_condition_{$i}",
-          E::ts("Condition"),
-          ['+' => E::ts("match"), "-" => E::ts("not match")],
+          E::ts('Condition'),
+          ['+' => E::ts('match'), '-' => E::ts('not match')],
           FALSE
       );
       $this->add(
           'text',
           "bic_restriction_regex_{$i}",
-          E::ts("Pattern"),
+          E::ts('Pattern'),
           [],
           FALSE
       );
       $this->add(
           'text',
           "bic_restriction_message_{$i}",
-          E::ts("Error Message"),
+          E::ts('Error Message'),
           [],
           FALSE
       );
@@ -72,9 +72,9 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
     $this->addButtons([
         [
-            'type'      => 'submit',
-            'name'      => E::ts('Submit'),
-            'isDefault' => TRUE,
+          'type'      => 'submit',
+          'name'      => E::ts('Submit'),
+          'isDefault' => TRUE,
         ],
     ]);
 
@@ -85,7 +85,7 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     // add resources
     Civi::resources()->addScriptFile(E::LONG_NAME, 'js/configuration_form.js');
     Civi::resources()->addVars('sepacustom', [
-        'bic_restriction_count' => self::MAX_BIC_RESTRICTION_COUNT
+      'bic_restriction_count' => self::MAX_BIC_RESTRICTION_COUNT,
     ]);
     parent::buildQuickForm();
   }
@@ -107,15 +107,14 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
           && !empty($values["bic_restriction_regex_{$i}"])) {
         // creditor and pattern are set => all good
         $bic_restrictions[] = [
-            'creditor_id' => $values["bic_restriction_creditor_{$i}"],
-            'match'       => $values["bic_restriction_condition_{$i}"],
-            'pattern'     => $values["bic_restriction_regex_{$i}"],
-            'error'       => $values["bic_restriction_message_{$i}"],
+          'creditor_id' => $values["bic_restriction_creditor_{$i}"],
+          'match'       => $values["bic_restriction_condition_{$i}"],
+          'pattern'     => $values["bic_restriction_regex_{$i}"],
+          'error'       => $values["bic_restriction_message_{$i}"],
         ];
       }
     }
     Civi::settings()->set('customsepa_bic_restrictions', $bic_restrictions);
-
 
     // done
     parent::postProcess();
@@ -124,24 +123,23 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/admin/sepacustom', 'reset=1'));
   }
 
-
   /**
    * Get the List of creditors
    */
   protected function getCreditors() {
     $list = [
-        ''  => E::ts('<i>disabled</i>'),
-        '*' => E::ts("any")
+      ''  => E::ts('<i>disabled</i>'),
+      '*' => E::ts('any'),
     ];
 
     $query = civicrm_api3('SepaCreditor', 'get', [
-        'option.limit' => 0,
-        'return'       => 'id,name,label'
+      'option.limit' => 0,
+      'return'       => 'id,name,label',
     ]);
 
     foreach ($query['values'] as $creditor) {
       $name = empty($creditor['label']) ? $creditor['name'] : $creditor['label'];
-      $list[$creditor['id']] =  "{$name} [{$creditor['id']}]";
+      $list[$creditor['id']] = "{$name} [{$creditor['id']}]";
     }
 
     return $list;

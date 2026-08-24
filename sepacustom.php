@@ -38,17 +38,19 @@ function sepacustom_civicrm_validateForm($formName, &$fields, &$files, &$form, &
  */
 function sepacustom_civicrm_defer_collection_date(&$collection_date, $creditor_id) {
   $bank_holidays = CRM_Sepacustom_Configuration::getBankHolidays();
-  while (in_array($collection_date, $bank_holidays)                      // this is a bank holiday
-      || date('N', strtotime($collection_date)) > 5) {   // or this is a weekend
+  // this is a bank holiday
+  while (in_array($collection_date, $bank_holidays)
+  // or this is a weekend
+      || date('N', strtotime($collection_date)) > 5) {
     // while this is not a valid collection day, move on to the next day
-    $collection_date = date('Y-m-d', strtotime("+1 day", strtotime($collection_date)));
+    $collection_date = date('Y-m-d', strtotime('+1 day', strtotime($collection_date)));
   }
 }
 
 /**
  * Implements hook_civicrm_config().
  *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/ 
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/
  */
 function sepacustom_civicrm_config(&$config) {
   _sepacustom_civix_civicrm_config($config);
@@ -79,22 +81,22 @@ function sepacustom_civicrm_enable() {
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_preProcess
  *
-
- // */
+ *
+ * // */
 
 /**
  * Implements hook_civicrm_navigationMenu().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_navigationMenu
  *
-function sepacustom_civicrm_navigationMenu(&$menu) {
-  _sepacustom_civix_insert_navigation_menu($menu, 'Mailings', array(
-    'label' => E::ts('New subliminal message'),
-    'name' => 'mailing_subliminal_message',
-    'url' => 'civicrm/mailing/subliminal',
-    'permission' => 'access CiviMail',
-    'operator' => 'OR',
-    'separator' => 0,
-  ));
-  _sepacustom_civix_navigationMenu($menu);
+ * function sepacustom_civicrm_navigationMenu(&$menu) {
+ * _sepacustom_civix_insert_navigation_menu($menu, 'Mailings', array(
+ * 'label' => E::ts('New subliminal message'),
+ * 'name' => 'mailing_subliminal_message',
+ * 'url' => 'civicrm/mailing/subliminal',
+ * 'permission' => 'access CiviMail',
+ * 'operator' => 'OR',
+ * 'separator' => 0,
+ * ));
+ * _sepacustom_civix_navigationMenu($menu);
 } // */
