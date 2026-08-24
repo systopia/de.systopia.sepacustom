@@ -30,12 +30,10 @@ class CRM_Sepacustom_Configuration {
    */
   public static function getBankHolidays(): array {
     $holidays = Civi::settings()->get('customsepa_bank_holidays');
-    if (is_array($holidays)) {
-      return $holidays;
-    }
-    else {
+    if (!is_array($holidays)) {
       return [];
     }
+    return array_values(array_filter($holidays, 'is_string'));
   }
 
   /**
@@ -50,12 +48,29 @@ class CRM_Sepacustom_Configuration {
    */
   public static function getBICRestrictions(): array {
     $restrictions = Civi::settings()->get('customsepa_bic_restrictions');
-    if (is_array($restrictions)) {
-      return $restrictions;
-    }
-    else {
+    if (!is_array($restrictions)) {
       return [];
     }
+
+    $valid_restrictions = [];
+    foreach ($restrictions as $restriction) {
+      if (
+        is_array($restriction)
+        && isset($restriction['creditor_id'], $restriction['match'], $restriction['pattern'], $restriction['error'])
+        && is_string($restriction['creditor_id'])
+        && is_string($restriction['match'])
+        && is_string($restriction['pattern'])
+        && is_string($restriction['error'])
+      ) {
+        $valid_restrictions[] = [
+          'creditor_id' => $restriction['creditor_id'],
+          'match'       => $restriction['match'],
+          'pattern'     => $restriction['pattern'],
+          'error'       => $restriction['error'],
+        ];
+      }
+    }
+    return $valid_restrictions;
   }
 
   /**

@@ -38,9 +38,11 @@ function sepacustom_civicrm_validateForm(
     $bic = $fields['bic'] ?? NULL;
     if (is_string($bic) && $bic !== '') {
       $creditor_id = $fields['creditor_id'] ?? NULL;
-      $bic_error = CRM_Sepacustom_Configuration::getBICRestrictionError($creditor_id, $bic);
-      if ($bic_error !== NULL) {
-        $errors['bic'] = $bic_error;
+      if (is_int($creditor_id) || is_string($creditor_id) || $creditor_id === NULL) {
+        $bic_error = CRM_Sepacustom_Configuration::getBICRestrictionError($creditor_id, $bic);
+        if ($bic_error !== NULL) {
+          $errors['bic'] = $bic_error;
+        }
       }
     }
   }
