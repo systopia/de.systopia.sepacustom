@@ -26,6 +26,9 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
   private const MAX_BIC_RESTRICTION_COUNT = 10;
 
+  /**
+   * @return void
+   */
   public function buildQuickForm() {
     CRM_Utils_System::setTitle(E::ts('CiviSEPA Customisations'));
 
@@ -92,6 +95,9 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     parent::buildQuickForm();
   }
 
+  /**
+   * @return void
+   */
   public function postProcess() {
     $values = $this->exportValues();
 
@@ -101,7 +107,7 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
       '/[^0-9-](?<date>[0-9]{4}-[0-9]{2}-[0-9]{2})[^0-9-]/',
       " {$values['bank_holidays']} ",
       $matches
-    )) {
+    ) > 0) {
       $bank_holidays = $matches['date'];
     }
     Civi::settings()->set('customsepa_bank_holidays', $bank_holidays);
@@ -131,8 +137,10 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
   /**
    * Get the List of creditors
+   *
+   * @return array<int|string, string>
    */
-  protected function getCreditors() {
+  protected function getCreditors(): array {
     $list = [
       ''  => E::ts('<i>disabled</i>'),
       '*' => E::ts('any'),
@@ -143,9 +151,11 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
       'return'       => 'id,name,label',
     ]);
 
-    foreach ($query['values'] as $creditor) {
-      $name = ($creditor['label'] ?? '') === '' ? $creditor['name'] : $creditor['label'];
-      $list[$creditor['id']] = "{$name} [{$creditor['id']}]";
+    if (is_array($query)) {
+      foreach ($query['values'] as $creditor) {
+        $name = ($creditor['label'] ?? '') === '' ? $creditor['name'] : $creditor['label'];
+        $list[$creditor['id']] = "{$name} [{$creditor['id']}]";
+      }
     }
 
     return $list;

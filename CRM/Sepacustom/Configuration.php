@@ -25,9 +25,10 @@ class CRM_Sepacustom_Configuration {
   /**
    * Get the list of bank holidays to exclude from batching
    *
-   * @return array of date strings
+   * @return array<int, string>
+   *   list of date strings
    */
-  public static function getBankHolidays() {
+  public static function getBankHolidays(): array {
     $holidays = Civi::settings()->get('customsepa_bank_holidays');
     if (is_array($holidays)) {
       return $holidays;
@@ -44,10 +45,10 @@ class CRM_Sepacustom_Configuration {
    * 'pattern'     - regex string
    * 'error'       - error message to report in case of a match
    *
-   * @return array with the restriction records
-   *
+   * @return array<int, array{creditor_id: string, match: string, pattern: string, error: string}>
+   *   the restriction records
    */
-  public static function getBICRestrictions() {
+  public static function getBICRestrictions(): array {
     $restrictions = Civi::settings()->get('customsepa_bic_restrictions');
     if (is_array($restrictions)) {
       return $restrictions;
@@ -60,18 +61,22 @@ class CRM_Sepacustom_Configuration {
   /**
    * Check if the given creditor/bic combination is restricted
    *
-   * @param $creditor_id  integer SepaCreditor ID
-   * @param $bic          string  BIC
-   * @return NULL|string error message in case there is a restriction
+   * @param int|string|null $creditor_id
+   *   SepaCreditor ID
+   * @param string $bic
+   *   BIC
+   *
+   * @return string|null
+   *   error message in case there is a restriction
    */
-  public static function getBICRestrictionError($creditor_id, $bic) {
+  public static function getBICRestrictionError($creditor_id, string $bic): ?string {
     $restrictions = self::getBICRestrictions();
     foreach ($restrictions as $r) {
       $restriction_creditor_id = (string) $r['creditor_id'];
       if ($restriction_creditor_id === (string) $creditor_id || $restriction_creditor_id === '*') {
         // it applies to this creditor
         if ($r['match'] !== '' && $r['pattern'] !== '') {
-          $match = preg_match("#{$r['pattern']}#", $bic);
+          $match = preg_match("#{$r['pattern']}#", $bic) === 1;
           if (($match && $r['match'] === '-') || (!$match && $r['match'] === '+')) {
             // this is a match
             return $r['error'] === '' ? E::ts('Invalid BIC for this creditor') : $r['error'];
@@ -85,8 +90,10 @@ class CRM_Sepacustom_Configuration {
 
   /**
    * Get the default form values with the current BIC restrictions
+   *
+   * @return array<string, string>
    */
-  public static function getBICRestrictionsFormValues() {
+  public static function getBICRestrictionsFormValues(): array {
     $values = [];
     $restrictions = self::getBICRestrictions();
     foreach ($restrictions as $i => $r) {
@@ -96,6 +103,28 @@ class CRM_Sepacustom_Configuration {
       $values["bic_restriction_message_{$i}"]   = $r['error'];
     }
     return $values;
+  }
+
+  /**
+   * Parse a date/time string into a Unix timestamp.
+   *
+   * Wraps strtotime() and throws instead of silently returning FALSE for an
+   * unparseable date/time string.
+   *
+   * @param string $datetime
+   * @param int|null $baseTimestamp
+   *
+   * @return int
+   *
+   * @throws \CRM_Core_Exception
+   *   If the date/time string could not be parsed.
+   */
+  public static function toTimestamp(string $datetime, ?int $baseTimestamp = NULL): int {
+    $timestamp = strtotime($datetime, $baseTimestamp);
+    if ($timestamp === FALSE) {
+      throw new CRM_Core_Exception("Could not parse date/time string \"{$datetime}\".");
+    }
+    return $timestamp;
   }
 
 }

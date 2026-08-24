@@ -18,7 +18,7 @@ declare(strict_types = 1);
 use CRM_Sepacustom_ExtensionUtil as E;
 
 class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
-  protected $_summary = NULL;
+  protected mixed $_summary = NULL;
 
   public function __construct() {
     $this->_columns = [
@@ -102,20 +102,24 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     parent::__construct();
   }
 
+  /**
+   * @return void
+   */
   public function preProcess() {
     $this->assign('reportTitle', E::ts('CiviSEPA Collection Forecast'));
     parent::preProcess();
   }
 
+  /**
+   * @return void
+   */
   public function from() {
-    $this->_from = NULL;
-
     // get (hopefully) pre-calculated collection table
     $horizon = $this->_params['horizon_value'] ?? '1 year';
     $caching = $this->_params['caching_value'] ?? '604800';
     $from_date = $this->getAlignedStartDate();
-    $to_date   = date('Y-m-d', strtotime("{$from_date} + {$horizon} - 1 day"));
-    $min_creation_time = date('YmdHis', strtotime("now - {$caching} seconds"));
+    $to_date   = date('Y-m-d', CRM_Sepacustom_Configuration::toTimestamp("{$from_date} + {$horizon} - 1 day"));
+    $min_creation_time = date('YmdHis', CRM_Sepacustom_Configuration::toTimestamp("now - {$caching} seconds"));
     $collections = $this->getCollectionsTable($from_date, $to_date, $min_creation_time);
 
     $this->_from = "
@@ -127,6 +131,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
 
   /**
    * Generate the SELECT clause and set class variable $_select.
+   *
+   * @return void
    */
   // phpcs:ignore Generic.Metrics.CyclomaticComplexity.TooHigh
   public function select() {
@@ -209,6 +215,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     $this->_select = 'SELECT ' . implode(', ', $this->_selectClauses) . ' ';
   }
 
+  /**
+   * @return void
+   */
   public function groupBy() {
     $this->_groupBy = NULL;
     $group_bys = [];
@@ -252,15 +261,15 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     }
 
     // finally: compile the group by clause
-    if ($group_bys !== []) {
-      $this->_groupBy = 'GROUP BY ' . implode(', ', $group_bys);
-    }
+    $this->_groupBy = 'GROUP BY ' . implode(', ', $group_bys);
   }
 
   /**
    * Add field specific where alterations.
    *
    * This can be overridden in reports for special treatment of a field
+   *
+   * @return void
    */
   public function where() {
     $where_clauses = [];
@@ -268,7 +277,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     // add time restrictions
     $from_date = $this->getAlignedStartDate();
     $horizon = $this->_params['horizon_value'] ?? '1 year';
-    $to_date   = date('Y-m-d', strtotime("{$from_date} + {$horizon} - 1 day"));
+    $to_date   = date('Y-m-d', CRM_Sepacustom_Configuration::toTimestamp("{$from_date} + {$horizon} - 1 day"));
     $where_clauses[] = "DATE(sdd_collection_forecast.collection_date) >= DATE('{$from_date}')";
     $where_clauses[] = "DATE(sdd_collection_forecast.collection_date) <= DATE('{$to_date}')";
 
@@ -312,11 +321,18 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
 
   /**
    * Modify column headers.
+   *
+   * @return void
    */
   public function modifyColumnHeaders() {
     // TODO: use this method to modify $this->_columnHeaders
   }
 
+  /**
+   * @param array<array-key, mixed> $rows
+   *
+   * @return void
+   */
   public function alterDisplay(&$rows) {
     // TODO: custom code to alter rows
   }
@@ -330,39 +346,39 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
   // phpcs:ignore Generic.Metrics.CyclomaticComplexity.TooHigh
   protected function getAlignedStartDate() {
     // start with now:
-    $start_date = strtotime('now');
+    $start_date = CRM_Sepacustom_Configuration::toTimestamp('now');
 
     // add collection date grouping
     if (($this->_params['group_bys']['collection_date'] ?? '') !== '') {
       switch ($this->_params['group_bys_freq']['collection_date']) {
         case 'YEARWEEK':
           while ((int) date('w', $start_date) !== 0) {
-            $start_date = strtotime('+1 day', $start_date);
+            $start_date = CRM_Sepacustom_Configuration::toTimestamp('+1 day', $start_date);
           }
           break;
 
         default:
         case 'MONTH':
           while ((int) date('d', $start_date) !== 1) {
-            $start_date = strtotime('+1 day', $start_date);
+            $start_date = CRM_Sepacustom_Configuration::toTimestamp('+1 day', $start_date);
           }
           break;
 
         case 'QUARTER':
           while ((int) date('d', $start_date) !== 1 && !in_array((int) date('m', $start_date), [1, 4, 7, 10], TRUE)) {
-            $start_date = strtotime('+1 day', $start_date);
+            $start_date = CRM_Sepacustom_Configuration::toTimestamp('+1 day', $start_date);
           }
           break;
 
         case 'YEAR':
-          $start_date = strtotime(date('Y', $start_date) . '-01-01 + 1 year');
+          $start_date = CRM_Sepacustom_Configuration::toTimestamp(date('Y', $start_date) . '-01-01 + 1 year');
           break;
       }
       // default is month
     }
     else {
       while ((int) date('d', $start_date) !== 1) {
-        $start_date = strtotime('+1 day', $start_date);
+        $start_date = CRM_Sepacustom_Configuration::toTimestamp('+1 day', $start_date);
       }
     }
     return date('Y-m-d', $start_date);
@@ -371,10 +387,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
   /**
    * Return a list of all creditors
    *
-   * @return array
+   * @return array<int, string>
    *   creditor id -> label
    */
-  protected function getAllCreditors() {
+  protected function getAllCreditors(): array {
     $creditor_list = [];
     $query = civicrm_api3(
         'SepaCreditor',
@@ -384,12 +400,14 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
           'return'       => 'id,name,label',
         ]
     );
-    foreach ($query['values'] as $creditor) {
-      if (($creditor['label'] ?? '') === '') {
-        $creditor_list[$creditor['id']] = $creditor['name'];
-      }
-      else {
-        $creditor_list[$creditor['id']] = $creditor['label'];
+    if (is_array($query)) {
+      foreach ($query['values'] as $creditor) {
+        if (($creditor['label'] ?? '') === '') {
+          $creditor_list[$creditor['id']] = $creditor['name'];
+        }
+        else {
+          $creditor_list[$creditor['id']] = $creditor['label'];
+        }
       }
     }
 
@@ -399,10 +417,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
   /**
    * Return a list of all campaigns
    *
-   * @return array
+   * @return array<int, string>
    *   campaign id -> title
    */
-  protected function getAllCampaigns() {
+  protected function getAllCampaigns(): array {
     $campaign_list = [];
     $query = civicrm_api3(
         'Campaign',
@@ -412,8 +430,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
           'return'       => 'id,title',
         ]
     );
-    foreach ($query['values'] as $campaign) {
-      $campaign_list[$campaign['id']] = $campaign['title'];
+    if (is_array($query)) {
+      foreach ($query['values'] as $campaign) {
+        $campaign_list[$campaign['id']] = $campaign['title'];
+      }
     }
 
     return $campaign_list;
@@ -439,17 +459,17 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
   // phpcs:ignore Generic.Metrics.CyclomaticComplexity.TooHigh
   protected function getCollectionsTable($from_date, $to_date, $min_creation_time) {
     // some basic data
-    $now           = strtotime('now');
+    $now           = CRM_Sepacustom_Configuration::toTimestamp('now');
     $today         = date('Y-m-d');
     $buffer        = '1 month';
     $table_pattern = '/^sdd_forecast_(?P<timestamp>[0-9]{14})_(?P<from>[0-9]{8})_(?P<to>[0-9]{8})$/';
 
     // normalise input
-    $min_creation_time  = date('YmdHis', strtotime($min_creation_time));
-    $from_date          = date('Ymd', strtotime($from_date));
-    $min_date           = date('Y-m-d', strtotime($from_date));
-    $to_date            = date('Ymd', strtotime($to_date));
-    $max_date           = date('Y-m-d', strtotime($to_date));
+    $min_creation_time  = date('YmdHis', CRM_Sepacustom_Configuration::toTimestamp($min_creation_time));
+    $from_date          = date('Ymd', CRM_Sepacustom_Configuration::toTimestamp($from_date));
+    $min_date           = date('Y-m-d', CRM_Sepacustom_Configuration::toTimestamp($from_date));
+    $to_date            = date('Ymd', CRM_Sepacustom_Configuration::toTimestamp($to_date));
+    $max_date           = date('Y-m-d', CRM_Sepacustom_Configuration::toTimestamp($to_date));
 
     // step one: find existing collection tables
     $candidates = [];
@@ -458,18 +478,21 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
       'SELECT table_name FROM information_schema.TABLES '
       . "WHERE TABLE_SCHEMA = '{$DSN['database']}' AND TABLE_NAME LIKE 'sdd_forecast_%';"
     );
+    if (!$candidate_query instanceof CRM_Core_DAO) {
+      throw new CRM_Core_Exception('Failed to query existing collection forecast tables.');
+    }
     while ($candidate_query->fetch()) {
-      $table_name = $candidate_query->table_name;
-      if (preg_match($table_pattern, $table_name)) {
+      $table_name = (string) $candidate_query->table_name;
+      if (preg_match($table_pattern, $table_name) === 1) {
         $candidates[] = $table_name;
       }
     }
 
     // step one: delete all outdated tables
-    $purge_date = date('YmdHis', strtotime('now -1 month'));
+    $purge_date = date('YmdHis', CRM_Sepacustom_Configuration::toTimestamp('now -1 month'));
     foreach (array_keys($candidates) as $index) {
       $table_name = $candidates[$index];
-      if (preg_match($table_pattern, $table_name, $match)) {
+      if (preg_match($table_pattern, $table_name, $match) === 1) {
         if ($match['timestamp'] < $purge_date) {
           // expired: delete that (old) table
           CRM_Core_DAO::executeQuery("DROP TABLE `{$table_name}`;");
@@ -481,7 +504,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     // step three: from the ones with the right horizon...
     $valid_candidates = [];
     foreach ($candidates as $table_name) {
-      if (preg_match($table_pattern, $table_name, $match)) {
+      if (preg_match($table_pattern, $table_name, $match) === 1) {
         if ($match['timestamp'] >= $min_creation_time
         && $match['from'] <= $from_date
         && $match['to'] >= $to_date) {
@@ -493,8 +516,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     if ($valid_candidates !== []) {
       // ...pick the most recent one and return
       sort($valid_candidates);
-      array_reverse($valid_candidates);
-      return reset($valid_candidates);
+      return end($valid_candidates);
     }
 
     // step four: there is no such table => create one
@@ -552,6 +574,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
             AND (rcontribution.is_test IS NULL OR rcontribution.is_test = 0)
             AND mandate.status IN ('FRST', 'RCUR');
           ");
+    if (!$active_mandates instanceof CRM_Core_DAO) {
+      throw new CRM_Core_Exception('Failed to query active mandates.');
+    }
     while ($active_mandates->fetch()) {
       $mandate = [
         'cycle_day'              => $active_mandates->cycle_day,
@@ -590,7 +615,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
         // move on to the next one
         $next_collection = date(
           'Y-m-d',
-          strtotime("{$next_collection} + {$mandate['frequency_interval']} {$mandate['frequency_unit']}")
+          CRM_Sepacustom_Configuration::toTimestamp(
+            "{$next_collection} + {$mandate['frequency_interval']} {$mandate['frequency_unit']}"
+          )
         );
       }
 
