@@ -24,7 +24,7 @@ use CRM_Sepacustom_ExtensionUtil as E;
  */
 function sepacustom_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
   // apply BIC restrictions to new mandates
-  if ($formName == 'CRM_Sepa_Form_CreateMandate') {
+  if ($formName === 'CRM_Sepa_Form_CreateMandate') {
     $bic = $fields['bic'] ?? NULL;
     if ($bic) {
       $creditor_id = $fields['creditor_id'] ?? NULL;
@@ -42,9 +42,9 @@ function sepacustom_civicrm_validateForm($formName, &$fields, &$files, &$form, &
 function sepacustom_civicrm_defer_collection_date(&$collection_date, $creditor_id) {
   $bank_holidays = CRM_Sepacustom_Configuration::getBankHolidays();
   // this is a bank holiday
-  while (in_array($collection_date, $bank_holidays)
+  while (in_array($collection_date, $bank_holidays, TRUE)
   // or this is a weekend
-      || date('N', strtotime($collection_date)) > 5) {
+      || (int) date('N', strtotime($collection_date)) > 5) {
     // while this is not a valid collection day, move on to the next day
     $collection_date = date('Y-m-d', strtotime('+1 day', strtotime($collection_date)));
   }

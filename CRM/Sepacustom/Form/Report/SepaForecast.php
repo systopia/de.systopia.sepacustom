@@ -111,8 +111,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     $this->_from = NULL;
 
     // get (hopefully) pre-calculated collection table
-    $horizon = CRM_Utils_Array::value('horizon_value', $this->_params, '1 year');
-    $caching = CRM_Utils_Array::value('caching_value', $this->_params, '604800');
+    $horizon = $this->_params['horizon_value'] ?? '1 year';
+    $caching = $this->_params['caching_value'] ?? '604800';
     $from_date = $this->getAlignedStartDate();
     $to_date   = date('Y-m-d', strtotime("{$from_date} + {$horizon} - 1 day"));
     $min_creation_time = date('YmdHis', strtotime("now - {$caching} seconds"));
@@ -131,12 +131,12 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
   // phpcs:ignore Generic.Metrics.CyclomaticComplexity.TooHigh
   public function select() {
     // if no columns selected, add the amount
-    if (empty($this->_params['fields'])) {
+    if (($this->_params['fields'] ?? []) === []) {
       $this->_params['fields'] = ['sum_amount' => 1];
     }
 
     // start with collection date frame
-    if (!empty($this->_params['group_bys']['collection_date'])) {
+    if (($this->_params['group_bys']['collection_date'] ?? '') !== '') {
       switch ($this->_params['group_bys_freq']['collection_date']) {
         case 'YEARWEEK':
           $this->_selectClauses = [
@@ -177,28 +177,28 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
       'type' => CRM_Utils_Type::T_STRING,
     ];
 
-    if (!empty($this->_params['fields']['sum_amount'])) {
+    if (($this->_params['fields']['sum_amount'] ?? '') !== '') {
       $this->_selectClauses[] = 'SUM(sdd_collection_forecast.amount) AS sum_amount';
       $this->_columnHeaders['sum_amount'] = [
         'title' => E::ts('Total Amount'),
         'type' => CRM_Utils_Type::T_MONEY,
       ];
     }
-    if (!empty($this->_params['fields']['avg_amount'])) {
+    if (($this->_params['fields']['avg_amount'] ?? '') !== '') {
       $this->_selectClauses[] = 'AVG(sdd_collection_forecast.amount) AS avg_amount';
       $this->_columnHeaders['avg_amount'] = [
         'title' => E::ts('Average Amount'),
         'type' => CRM_Utils_Type::T_MONEY,
       ];
     }
-    if (!empty($this->_params['fields']['contribution_count'])) {
+    if (($this->_params['fields']['contribution_count'] ?? '') !== '') {
       $this->_selectClauses[] = 'COUNT(*) AS contribution_count';
       $this->_columnHeaders['contribution_count'] = [
         'title' => E::ts('Individual Contributions'),
         'type' => CRM_Utils_Type::T_INT,
       ];
     }
-    if (!empty($this->_params['fields']['contact_count'])) {
+    if (($this->_params['fields']['contact_count'] ?? '') !== '') {
       $this->_selectClauses[] = 'COUNT(DISTINCT(sdd_collection_forecast.contact_id)) AS contact_count';
       $this->_columnHeaders['contact_count'] = [
         'title' => E::ts('Individual Contacts'),
@@ -214,7 +214,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     $group_bys = [];
 
     // add collection date grouping
-    if (!empty($this->_params['group_bys']['collection_date'])) {
+    if (isset($this->_params['group_bys']['collection_date'])) {
       switch ($this->_params['group_bys_freq']['collection_date']) {
         case 'YEARWEEK':
           $group_bys[] = 'YEAR(sdd_collection_forecast.collection_date), WEEK(sdd_collection_forecast.collection_date)';
@@ -242,17 +242,17 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     }
 
     // add financial type grouping
-    if (!empty($this->_params['group_bys']['financial_type_id'])) {
+    if (isset($this->_params['group_bys']['financial_type_id'])) {
       $group_bys[] = 'sdd_collection_forecast.financial_type_id';
     }
 
     // add creditor ID grouping
-    if (!empty($this->_params['group_bys']['creditor_id'])) {
+    if (isset($this->_params['group_bys']['creditor_id'])) {
       $group_bys[] = 'sdd_collection_forecast.creditor_id';
     }
 
     // finally: compile the group by clause
-    if (!empty($group_bys)) {
+    if ($group_bys !== []) {
       $this->_groupBy = 'GROUP BY ' . implode(', ', $group_bys);
     }
   }
@@ -267,15 +267,15 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
 
     // add time restrictions
     $from_date = $this->getAlignedStartDate();
-    $horizon = CRM_Utils_Array::value('horizon_value', $this->_params, '1 year');
+    $horizon = $this->_params['horizon_value'] ?? '1 year';
     $to_date   = date('Y-m-d', strtotime("{$from_date} + {$horizon} - 1 day"));
     $where_clauses[] = "DATE(sdd_collection_forecast.collection_date) >= DATE('{$from_date}')";
     $where_clauses[] = "DATE(sdd_collection_forecast.collection_date) <= DATE('{$to_date}')";
 
     // add financial_type restriction
-    if (!empty($this->_params['financial_type_id_value'])) {
+    if (isset($this->_params['financial_type_id_value'])) {
       $values = implode(',', $this->_params['financial_type_id_value']);
-      if ($this->_params['financial_type_id_op'] == 'in') {
+      if ($this->_params['financial_type_id_op'] === 'in') {
         $where_clauses[] = "sdd_collection_forecast.financial_type_id IN ($values)";
       }
       else {
@@ -284,9 +284,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     }
 
     // add creditor restriction
-    if (!empty($this->_params['creditor_id_value'])) {
+    if (isset($this->_params['creditor_id_value'])) {
       $values = implode(',', $this->_params['creditor_id_value']);
-      if ($this->_params['creditor_id_op'] == 'in') {
+      if ($this->_params['creditor_id_op'] === 'in') {
         $where_clauses[] = "sdd_collection_forecast.creditor_id IN ($values)";
       }
       else {
@@ -295,9 +295,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     }
 
     // add campaign restriction
-    if (!empty($this->_params['campaign_id_value'])) {
+    if (isset($this->_params['campaign_id_value'])) {
       $values = implode(',', $this->_params['campaign_id_value']);
-      if ($this->_params['campaign_id_op'] == 'in') {
+      if ($this->_params['campaign_id_op'] === 'in') {
         $where_clauses[] = "sdd_collection_forecast.campaign_id IN ($values)";
       }
       else {
@@ -333,23 +333,23 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     $start_date = strtotime('now');
 
     // add collection date grouping
-    if (!empty($this->_params['group_bys']['collection_date'])) {
+    if (($this->_params['group_bys']['collection_date'] ?? '') !== '') {
       switch ($this->_params['group_bys_freq']['collection_date']) {
         case 'YEARWEEK':
-          while (date('w', $start_date) <> 0) {
+          while ((int) date('w', $start_date) !== 0) {
             $start_date = strtotime('+1 day', $start_date);
           }
           break;
 
         default:
         case 'MONTH':
-          while (date('d', $start_date) <> 1) {
+          while ((int) date('d', $start_date) !== 1) {
             $start_date = strtotime('+1 day', $start_date);
           }
           break;
 
         case 'QUARTER':
-          while (date('d', $start_date) <> 1 && !in_array(date('m', $start_date), [1, 4, 7, 10])) {
+          while ((int) date('d', $start_date) !== 1 && !in_array((int) date('m', $start_date), [1, 4, 7, 10], TRUE)) {
             $start_date = strtotime('+1 day', $start_date);
           }
           break;
@@ -361,7 +361,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
       // default is month
     }
     else {
-      while (date('d', $start_date) <> 1) {
+      while ((int) date('d', $start_date) !== 1) {
         $start_date = strtotime('+1 day', $start_date);
       }
     }
@@ -385,7 +385,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
         ]
     );
     foreach ($query['values'] as $creditor) {
-      if (empty($creditor['label'])) {
+      if (($creditor['label'] ?? '') === '') {
         $creditor_list[$creditor['id']] = $creditor['name'];
       }
       else {
@@ -490,7 +490,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
         }
       }
     }
-    if (!empty($valid_candidates)) {
+    if ($valid_candidates !== []) {
       // ...pick the most recent one and return
       sort($valid_candidates);
       array_reverse($valid_candidates);
@@ -568,15 +568,15 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
       $next_collection = CRM_Sepa_Logic_Batching::getNextExecutionDate(
         $mandate,
         $now,
-        ($mandate['status'] == 'FRST')
+        ($mandate['status'] === 'FRST')
       );
 
       // calculate abortion date
       $abortion_date = $max_date;
-      if (!empty($mandate['end_date'])) {
+      if ($mandate['end_date'] !== NULL) {
         $abortion_date = min($abortion_date, $mandate['end_date']);
       }
-      if (!empty($mandate['cancel_date'])) {
+      if ($mandate['cancel_date'] !== NULL) {
         $abortion_date = min($abortion_date, $mandate['cancel_date']);
       }
 
@@ -595,9 +595,9 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
       }
 
       // write out
-      if (!empty($collection_dates)) {
+      if ($collection_dates !== []) {
         $values = [];
-        $campaign_id = empty($active_mandates->mandate_campaign_id)
+        $campaign_id = $active_mandates->mandate_campaign_id === NULL
           ? 'NULL'
           : (int) $active_mandates->mandate_campaign_id;
         $template = '('

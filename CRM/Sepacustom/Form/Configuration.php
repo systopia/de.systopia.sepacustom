@@ -109,8 +109,8 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     // extract BIC restrictions
     $bic_restrictions = [];
     foreach (range(0, self::MAX_BIC_RESTRICTION_COUNT) as $i) {
-      if (!empty($values["bic_restriction_creditor_{$i}"])
-          && !empty($values["bic_restriction_regex_{$i}"])) {
+      if (($values["bic_restriction_creditor_{$i}"] ?? '') !== ''
+          && ($values["bic_restriction_regex_{$i}"] ?? '') !== '') {
         // creditor and pattern are set => all good
         $bic_restrictions[] = [
           'creditor_id' => $values["bic_restriction_creditor_{$i}"],
@@ -144,7 +144,7 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     ]);
 
     foreach ($query['values'] as $creditor) {
-      $name = empty($creditor['label']) ? $creditor['name'] : $creditor['label'];
+      $name = ($creditor['label'] ?? '') === '' ? $creditor['name'] : $creditor['label'];
       $list[$creditor['id']] = "{$name} [{$creditor['id']}]";
     }
 

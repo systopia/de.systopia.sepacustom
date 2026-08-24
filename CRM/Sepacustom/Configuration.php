@@ -67,13 +67,14 @@ class CRM_Sepacustom_Configuration {
   public static function getBICRestrictionError($creditor_id, $bic) {
     $restrictions = self::getBICRestrictions();
     foreach ($restrictions as $r) {
-      if ($r['creditor_id'] == $creditor_id || $r['creditor_id'] == '*') {
+      $restriction_creditor_id = (string) $r['creditor_id'];
+      if ($restriction_creditor_id === (string) $creditor_id || $restriction_creditor_id === '*') {
         // it applies to this creditor
-        if (!empty($r['match']) && !empty($r['pattern'])) {
+        if ($r['match'] !== '' && $r['pattern'] !== '') {
           $match = preg_match("#{$r['pattern']}#", $bic);
-          if (($match && $r['match'] == '-') || (!$match && $r['match'] == '+')) {
+          if (($match && $r['match'] === '-') || (!$match && $r['match'] === '+')) {
             // this is a match
-            return empty($r['error']) ? E::ts('Invalid BIC for this creditor') : $r['error'];
+            return $r['error'] === '' ? E::ts('Invalid BIC for this creditor') : $r['error'];
           }
         }
       }
