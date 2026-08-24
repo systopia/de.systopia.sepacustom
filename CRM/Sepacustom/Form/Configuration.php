@@ -13,6 +13,8 @@
 | written permission from the original author(s).        |
 +--------------------------------------------------------*/
 
+declare(strict_types = 1);
+
 use CRM_Sepacustom_ExtensionUtil as E;
 
 /**
@@ -22,7 +24,7 @@ use CRM_Sepacustom_ExtensionUtil as E;
  */
 class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
-  const MAX_BIC_RESTRICTION_COUNT = 10;
+  private const MAX_BIC_RESTRICTION_COUNT = 10;
 
   public function buildQuickForm() {
     CRM_Utils_System::setTitle(E::ts('CiviSEPA Customisations'));
@@ -95,7 +97,11 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
     // extract bank holidays
     $bank_holidays = [];
-    if (preg_match_all('/[^0-9-](?<date>[0-9]{4}-[0-9]{2}-[0-9]{2})[^0-9-]/', " {$values['bank_holidays']} ", $matches)) {
+    if (preg_match_all(
+      '/[^0-9-](?<date>[0-9]{4}-[0-9]{2}-[0-9]{2})[^0-9-]/',
+      " {$values['bank_holidays']} ",
+      $matches
+    )) {
       $bank_holidays = $matches['date'];
     }
     Civi::settings()->set('customsepa_bank_holidays', $bank_holidays);

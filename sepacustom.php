@@ -13,6 +13,9 @@
 | written permission from the original author(s).        |
 +--------------------------------------------------------*/
 
+declare(strict_types = 1);
+
+// phpcs:disable PSR1.Files.SideEffects
 require_once 'sepacustom.civix.php';
 use CRM_Sepacustom_ExtensionUtil as E;
 

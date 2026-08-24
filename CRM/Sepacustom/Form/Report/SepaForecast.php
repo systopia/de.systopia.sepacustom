@@ -13,6 +13,8 @@
 | written permission from the original author(s).        |
 +--------------------------------------------------------*/
 
+declare(strict_types = 1);
+
 use CRM_Sepacustom_ExtensionUtil as E;
 
 class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
@@ -35,13 +37,6 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
           'contact_count' => [
             'title' => E::ts('Contact Count'),
           ],
-                    //                    'financial_type_id' => [
-                    //                        'name' => 'financial_type_id',
-                    //                        'title' => E::ts("Financial Type"),
-                    //                    ],
-                    //                    'creditor_id' => [
-                    //                        'title' => E::ts("Creditor"),
-                    //                    ],
         ],
         'filters' => [
           'horizon' => [
@@ -97,14 +92,6 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
             'frequency' => TRUE,
             'chart' => TRUE,
           ],
-                    //                    'financial_type_id' => [
-                    //                        'name' => 'financial_type_id',
-                    //                        'title' => E::ts("Financial Type"),
-                    //                    ],
-                    //                    'creditor_id' => [
-                    //                        'name' => 'creditor_id',
-                    //                        'title' => E::ts("Creditor"),
-                    //                    ],
         ],
       ],
     ];
@@ -133,13 +120,15 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
 
     $this->_from = "
          FROM  {$collections} sdd_collection_forecast
-         LEFT JOIN civicrm_contact {$this->_aliases['civicrm_contact']} ON {$this->_aliases['civicrm_contact']}.id = sdd_collection_forecast.contact_id
+         LEFT JOIN civicrm_contact {$this->_aliases['civicrm_contact']}
+           ON {$this->_aliases['civicrm_contact']}.id = sdd_collection_forecast.contact_id
         ";
   }
 
   /**
    * Generate the SELECT clause and set class variable $_select.
    */
+  // phpcs:ignore Generic.Metrics.CyclomaticComplexity.TooHigh
   public function select() {
     // if no columns selected, add the amount
     if (empty($this->_params['fields'])) {
@@ -150,16 +139,25 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     if (!empty($this->_params['group_bys']['collection_date'])) {
       switch ($this->_params['group_bys_freq']['collection_date']) {
         case 'YEARWEEK':
-          $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), 'W', LPAD(WEEK(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame"];
+          $this->_selectClauses = [
+            "CONCAT(YEAR(sdd_collection_forecast.collection_date), 'W', "
+            . 'LPAD(WEEK(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame',
+          ];
           break;
 
         default:
         case 'MONTH':
-          $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', LPAD(MONTH(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame"];
+          $this->_selectClauses = [
+            "CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', "
+            . 'LPAD(MONTH(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame',
+          ];
           break;
 
         case 'QUARTER':
-          $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), 'Q', QUARTER(sdd_collection_forecast.collection_date)) AS date_frame"];
+          $this->_selectClauses = [
+            "CONCAT(YEAR(sdd_collection_forecast.collection_date), 'Q', "
+            . 'QUARTER(sdd_collection_forecast.collection_date)) AS date_frame',
+          ];
           break;
 
         case 'YEAR':
@@ -169,7 +167,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
       // default is month
     }
     else {
-      $this->_selectClauses = ["CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', LPAD(MONTH(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame"];
+      $this->_selectClauses = [
+        "CONCAT(YEAR(sdd_collection_forecast.collection_date), '-', "
+        . 'LPAD(MONTH(sdd_collection_forecast.collection_date), 2, 0)) AS date_frame',
+      ];
     }
     $this->_columnHeaders['date_frame'] = [
       'title' => E::ts('Time Frame'),
@@ -221,11 +222,13 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
 
         default:
         case 'MONTH':
-          $group_bys[] = 'YEAR(sdd_collection_forecast.collection_date), MONTH(sdd_collection_forecast.collection_date)';
+          $group_bys[] = 'YEAR(sdd_collection_forecast.collection_date), '
+            . 'MONTH(sdd_collection_forecast.collection_date)';
           break;
 
         case 'QUARTER':
-          $group_bys[] = 'YEAR(sdd_collection_forecast.collection_date), QUARTER(sdd_collection_forecast.collection_date)';
+          $group_bys[] = 'YEAR(sdd_collection_forecast.collection_date), '
+            . 'QUARTER(sdd_collection_forecast.collection_date)';
           break;
 
         case 'YEAR':
@@ -258,14 +261,6 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
    * Add field specific where alterations.
    *
    * This can be overridden in reports for special treatment of a field
-   *
-   * @param array $field Field specifications
-   * @param string $op Query operator (not an exact match to sql)
-   * @param mixed $value
-   * @param float $min
-   * @param float $max
-   *
-   * @return null|string
    */
   public function where() {
     $where_clauses = [];
@@ -306,7 +301,8 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
         $where_clauses[] = "sdd_collection_forecast.campaign_id IN ($values)";
       }
       else {
-        $where_clauses[] = "sdd_collection_forecast.campaign_id NOT IN ($values) OR sdd_collection_forecast.campaign_id IS NULL";
+        $where_clauses[] = "sdd_collection_forecast.campaign_id NOT IN ($values) "
+          . 'OR sdd_collection_forecast.campaign_id IS NULL';
       }
     }
 
@@ -331,6 +327,7 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
    *
    * @return string start date of the next period
    */
+  // phpcs:ignore Generic.Metrics.CyclomaticComplexity.TooHigh
   protected function getAlignedStartDate() {
     // start with now:
     $start_date = strtotime('now');
@@ -427,15 +424,19 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
    *
    * Table name pattern is sdd_forecast_<creation>_<from>_<to>
    *
-   * @param integer $horizon
-   *     horizon / timeframe in days
+   * @param string $from_date
+   *     start of the required time frame
    *
-   * @param integer $max_age
-   *     maximum age of table in seconds
+   * @param string $to_date
+   *     end of the required time frame
+   *
+   * @param string $min_creation_time
+   *     minimum creation time to accept an existing table
    *
    * @return string
    *   name of the table to use
    */
+  // phpcs:ignore Generic.Metrics.CyclomaticComplexity.TooHigh
   protected function getCollectionsTable($from_date, $to_date, $min_creation_time) {
     // some basic data
     $now           = strtotime('now');
@@ -453,7 +454,10 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
     // step one: find existing collection tables
     $candidates = [];
     $DSN = DB::parseDSN(CRM_Core_Config::singleton()->dsn);
-    $candidate_query = CRM_Core_DAO::executeQuery("SELECT table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{$DSN['database']}' AND TABLE_NAME LIKE 'sdd_forecast_%';");
+    $candidate_query = CRM_Core_DAO::executeQuery(
+      'SELECT table_name FROM information_schema.TABLES '
+      . "WHERE TABLE_SCHEMA = '{$DSN['database']}' AND TABLE_NAME LIKE 'sdd_forecast_%';"
+    );
     while ($candidate_query->fetch()) {
       $table_name = $candidate_query->table_name;
       if (preg_match($table_pattern, $table_name)) {
@@ -538,12 +542,14 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
             rcontribution.end_date           AS end_date,
             mandate.status                   AS status
           FROM civicrm_sdd_mandate           AS mandate
-          INNER JOIN civicrm_contribution_recur AS rcontribution       ON mandate.entity_id = rcontribution.id AND mandate.entity_table = 'civicrm_contribution_recur'
-          LEFT  JOIN civicrm_contribution       AS first_contribution  ON mandate.first_contribution_id = first_contribution.id
+          INNER JOIN civicrm_contribution_recur AS rcontribution
+            ON mandate.entity_id = rcontribution.id AND mandate.entity_table = 'civicrm_contribution_recur'
+          LEFT  JOIN civicrm_contribution       AS first_contribution
+            ON mandate.first_contribution_id = first_contribution.id
           LEFT  JOIN civicrm_sdd_creditor       AS creditor            ON mandate.creditor_id = creditor.id
           WHERE mandate.type = 'RCUR'
             AND creditor.mandate_prefix <> 'TEST'
-            AND (rcontribution.is_test IS NULL OR rcontribution.is_test = 0) 
+            AND (rcontribution.is_test IS NULL OR rcontribution.is_test = 0)
             AND mandate.status IN ('FRST', 'RCUR');
           ");
     while ($active_mandates->fetch()) {
@@ -582,25 +588,45 @@ class CRM_Sepacustom_Form_Report_SepaForecast extends CRM_Report_Form {
         }
 
         // move on to the next one
-        $next_collection = date('Y-m-d', strtotime("{$next_collection} + {$mandate['frequency_interval']} {$mandate['frequency_unit']}"));
+        $next_collection = date(
+          'Y-m-d',
+          strtotime("{$next_collection} + {$mandate['frequency_interval']} {$mandate['frequency_unit']}")
+        );
       }
 
       // write out
       if (!empty($collection_dates)) {
         $values = [];
-        $campaign_id = empty($active_mandates->mandate_campaign_id) ? 'NULL' : (int) $active_mandates->mandate_campaign_id;
-        $template = "({$active_mandates->mandate_id},{$active_mandates->mandate_contact_id},{$active_mandates->mandate_creditor_id},{$campaign_id},{$active_mandates->rc_financial_type_id},{$active_mandates->rc_amount},DATE('%s'))";
+        $campaign_id = empty($active_mandates->mandate_campaign_id)
+          ? 'NULL'
+          : (int) $active_mandates->mandate_campaign_id;
+        $template = '('
+          . "{$active_mandates->mandate_id},"
+          . "{$active_mandates->mandate_contact_id},"
+          . "{$active_mandates->mandate_creditor_id},"
+          . "{$campaign_id},"
+          . "{$active_mandates->rc_financial_type_id},"
+          . "{$active_mandates->rc_amount},"
+          . "DATE('%s'))";
         foreach ($collection_dates as $collection_date) {
           // TODO: defer?
           $values[] = sprintf($template, $collection_date);
         }
         // write out
-        CRM_Core_DAO::executeQuery("INSERT INTO `{$table_name}`(mandate_id,contact_id,creditor_id,campaign_id,financial_type_id,amount,collection_date) VALUES " . implode(',', $values));
+        CRM_Core_DAO::executeQuery(
+          "INSERT INTO `{$table_name}`"
+          . '(mandate_id,contact_id,creditor_id,campaign_id,financial_type_id,amount,collection_date) VALUES '
+          . implode(',', $values)
+        );
       }
     } // on to the next mandate
 
     // we're done:
-    Civi::log()->debug(sprintf("Created SEPA Forecast data table '%s' in %.1fs", $table_name, microtime(TRUE) - $creation_timestamp));
+    Civi::log()->debug(sprintf(
+      "Created SEPA Forecast data table '%s' in %.1fs",
+      $table_name,
+      microtime(TRUE) - $creation_timestamp
+    ));
     return $table_name;
   }
 
