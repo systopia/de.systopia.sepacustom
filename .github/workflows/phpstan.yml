@@ -38,6 +38,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Checkout CiviSEPA extension
+        # CRM_Sepa_Logic_Batching (see SepaForecast.php) belongs to the
+        # required "org.project60.sepa" extension (see info.xml). It's not a
+        # composer/runtime dependency, so PHPStan needs a real checkout to
+        # resolve its classes; a local phpstan.neon typically scans one from
+        # a sibling directory the same way.
+        run: git clone --depth 1 https://github.com/Project60/org.project60.sepa.git "$(dirname "$PWD")/org.project60.sepa"
+
       - name: Setup PHP
         uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # 2.37.1
         with:
