@@ -2,11 +2,6 @@ includes:
 	- phpstan.neon.dist
 
 parameters:
-	# Required "org.project60.sepa" extension (see info.xml), checked out as a
-	# sibling directory by the "Checkout CiviSEPA extension" workflow step -
-	# mirrors what a local phpstan.neon typically points at.
-	scanDirectories:
-		- ../org.project60.sepa/
 	bootstrapFiles:
 		- vendor/autoload.php
 	# Because we test with different versions in CI we may have unmatched errors.
