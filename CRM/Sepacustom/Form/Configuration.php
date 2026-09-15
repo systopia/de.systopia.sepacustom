@@ -13,6 +13,8 @@
 | written permission from the original author(s).        |
 +--------------------------------------------------------*/
 
+declare(strict_types = 1);
+
 use CRM_Sepacustom_ExtensionUtil as E;
 
 /**
@@ -22,49 +24,52 @@ use CRM_Sepacustom_ExtensionUtil as E;
  */
 class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
-  const MAX_BIC_RESTRICTION_COUNT = 10;
+  private const MAX_BIC_RESTRICTION_COUNT = 10;
 
+  /**
+   * @return void
+   */
   public function buildQuickForm() {
-    CRM_Utils_System::setTitle(E::ts("CiviSEPA Customisations"));
+    CRM_Utils_System::setTitle(E::ts('CiviSEPA Customisations'));
 
     // bank holiday field
     $this->add(
       'textarea',
       'bank_holidays',
-      E::ts("Bank Holidays"),
+      E::ts('Bank Holidays'),
       ['class' => 'huge'],
       FALSE
     );
 
     // add BIC restrictions
     $creditors = $this->getCreditors();
-    $this->assign("bic_restrictions", range(0, self::MAX_BIC_RESTRICTION_COUNT));
+    $this->assign('bic_restrictions', range(0, self::MAX_BIC_RESTRICTION_COUNT));
     foreach (range(0, self::MAX_BIC_RESTRICTION_COUNT) as $i) {
       $this->add(
           'select',
           "bic_restriction_creditor_{$i}",
-          E::ts("Creditor"),
+          E::ts('Creditor'),
           $creditors,
           FALSE
       );
       $this->add(
           'select',
           "bic_restriction_condition_{$i}",
-          E::ts("Condition"),
-          ['+' => E::ts("match"), "-" => E::ts("not match")],
+          E::ts('Condition'),
+          ['+' => E::ts('match'), '-' => E::ts('not match')],
           FALSE
       );
       $this->add(
           'text',
           "bic_restriction_regex_{$i}",
-          E::ts("Pattern"),
+          E::ts('Pattern'),
           [],
           FALSE
       );
       $this->add(
           'text',
           "bic_restriction_message_{$i}",
-          E::ts("Error Message"),
+          E::ts('Error Message'),
           [],
           FALSE
       );
@@ -72,9 +77,9 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
 
     $this->addButtons([
         [
-            'type'      => 'submit',
-            'name'      => E::ts('Submit'),
-            'isDefault' => TRUE,
+          'type'      => 'submit',
+          'name'      => E::ts('Submit'),
+          'isDefault' => TRUE,
         ],
     ]);
 
@@ -85,17 +90,24 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     // add resources
     Civi::resources()->addScriptFile(E::LONG_NAME, 'js/configuration_form.js');
     Civi::resources()->addVars('sepacustom', [
-        'bic_restriction_count' => self::MAX_BIC_RESTRICTION_COUNT
+      'bic_restriction_count' => self::MAX_BIC_RESTRICTION_COUNT,
     ]);
     parent::buildQuickForm();
   }
 
+  /**
+   * @return void
+   */
   public function postProcess() {
     $values = $this->exportValues();
 
     // extract bank holidays
     $bank_holidays = [];
-    if (preg_match_all('/[^0-9-](?<date>[0-9]{4}-[0-9]{2}-[0-9]{2})[^0-9-]/', " {$values['bank_holidays']} ", $matches)) {
+    if (preg_match_all(
+      '/[^0-9-](?<date>[0-9]{4}-[0-9]{2}-[0-9]{2})[^0-9-]/',
+      " {$values['bank_holidays']} ",
+      $matches
+    ) > 0) {
       $bank_holidays = $matches['date'];
     }
     Civi::settings()->set('customsepa_bank_holidays', $bank_holidays);
@@ -103,19 +115,18 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     // extract BIC restrictions
     $bic_restrictions = [];
     foreach (range(0, self::MAX_BIC_RESTRICTION_COUNT) as $i) {
-      if (!empty($values["bic_restriction_creditor_{$i}"])
-          && !empty($values["bic_restriction_regex_{$i}"])) {
+      if (($values["bic_restriction_creditor_{$i}"] ?? '') !== ''
+          && ($values["bic_restriction_regex_{$i}"] ?? '') !== '') {
         // creditor and pattern are set => all good
         $bic_restrictions[] = [
-            'creditor_id' => $values["bic_restriction_creditor_{$i}"],
-            'match'       => $values["bic_restriction_condition_{$i}"],
-            'pattern'     => $values["bic_restriction_regex_{$i}"],
-            'error'       => $values["bic_restriction_message_{$i}"],
+          'creditor_id' => $values["bic_restriction_creditor_{$i}"],
+          'match'       => $values["bic_restriction_condition_{$i}"],
+          'pattern'     => $values["bic_restriction_regex_{$i}"],
+          'error'       => $values["bic_restriction_message_{$i}"],
         ];
       }
     }
     Civi::settings()->set('customsepa_bic_restrictions', $bic_restrictions);
-
 
     // done
     parent::postProcess();
@@ -124,24 +135,27 @@ class CRM_Sepacustom_Form_Configuration extends CRM_Core_Form {
     CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/admin/sepacustom', 'reset=1'));
   }
 
-
   /**
    * Get the List of creditors
+   *
+   * @return array<int|string, string>
    */
-  protected function getCreditors() {
+  protected function getCreditors(): array {
     $list = [
-        ''  => E::ts('<i>disabled</i>'),
-        '*' => E::ts("any")
+      ''  => E::ts('<i>disabled</i>'),
+      '*' => E::ts('any'),
     ];
 
     $query = civicrm_api3('SepaCreditor', 'get', [
-        'option.limit' => 0,
-        'return'       => 'id,name,label'
+      'option.limit' => 0,
+      'return'       => 'id,name,label',
     ]);
 
-    foreach ($query['values'] as $creditor) {
-      $name = empty($creditor['label']) ? $creditor['name'] : $creditor['label'];
-      $list[$creditor['id']] =  "{$name} [{$creditor['id']}]";
+    if (is_array($query)) {
+      foreach ($query['values'] as $creditor) {
+        $name = ($creditor['label'] ?? '') === '' ? $creditor['name'] : $creditor['label'];
+        $list[$creditor['id']] = "{$name} [{$creditor['id']}]";
+      }
     }
 
     return $list;
