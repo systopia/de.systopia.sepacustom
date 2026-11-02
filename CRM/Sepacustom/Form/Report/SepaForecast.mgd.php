@@ -13,20 +13,22 @@
 | written permission from the original author(s).        |
 +--------------------------------------------------------*/
 
+declare(strict_types = 1);
+
 use CRM_Sepacustom_ExtensionUtil as E;
 
 return [
     [
-        'name'   => 'CRM_Sepacustom_Form_Report_SepaForecast',
-        'entity' => 'ReportTemplate',
-        'params' =>
+      'name'   => 'CRM_Sepacustom_Form_Report_SepaForecast',
+      'entity' => 'ReportTemplate',
+      'params' =>
             [
-                'version'     => 3,
-                'label'       => E::ts("SEPA Forecast"),
-                'description' => E::ts("Forecast of CiviSEPA collections"),
-                'class_name'  => 'CRM_Sepacustom_Form_Report_SepaForecast',
-                'report_url'  => 'de.systopia.sepacustom/sepaforecast',
-                'component'   => 'CiviContribute',
+              'version'     => 3,
+              'label'       => E::ts('SEPA Forecast'),
+              'description' => E::ts('Forecast of CiviSEPA collections'),
+              'class_name'  => 'CRM_Sepacustom_Form_Report_SepaForecast',
+              'report_url'  => 'de.systopia.sepacustom/sepaforecast',
+              'component'   => 'CiviContribute',
             ],
     ],
 ];
